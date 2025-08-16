@@ -1,0 +1,16 @@
+# Python temporary files
+__pycache__/
+*.pyc
+.env
+venv/
+.DS_Store
+
+# Project outputs (NEVER commit these)
+apple_health_export/
+converted/
+features/
+models/
+explainability/
+predictions/
+report/
+
