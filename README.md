@@ -264,8 +264,8 @@ If you use this work in your research, please cite:
 @software{su2024hrr,
   title={Personalized Freediving Recovery Analysis: A Machine Learning Feasibility Study},
   author={Su, Yi-Chuan},
-  year={2024},
-  url={https://github.com/yourusername/HRR_project}
+  year={2025},
+  url={https://github.com/billy1030714/freediving-recovery-analysis.git}
 }
 ```
 
