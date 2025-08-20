@@ -1,16 +1,50 @@
-# Python temporary files
+# Python
 __pycache__/
-*.pyc
-.env
-venv/
-.DS_Store
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
 
-# Project outputs (NEVER commit these)
+# IDE / OS specific
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+venv/
+env/
+ENV/
+
+# Data files - We don't want to upload large data files to Git
+# Assuming your data folders contain sensitive or large files
 apple_health_export/
 converted/
 features/
+# We can make an exception for small example files if needed, e.g.:
+# !features/example.csv
+
+# Report outputs (we only track the code that generates them)
+report/figures/
+report/*.md
+report/*.pdf
+
+# Predictions & Models
+predictions/
 models/
 explainability/
-predictions/
-report/
 
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Project specific
+.project_root
+
+# Temporary files
+*.tmp
+*.log

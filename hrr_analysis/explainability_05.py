@@ -1,27 +1,17 @@
 """
-explainability_05.py – 模型可解釋性分析 (XAI) 腳本
-
-本腳本為流程的第五步，旨在深入剖析已訓練好的模型，理解其決策行為。
-
-核心流程：
-1.  載入由 04_models 產出的最佳模型 (`best_model.joblib`) 及其相關元數據。
-2.  使用共用的 data_loader 讀取與訓練時相同的特徵數據。
-3.  應用四種主流 XAI 技術，生成視覺化圖表並儲存：
-    -   SHAP (SHapley Additive exPlanations): 提供全域與區域性的特徵貢獻度。
-    -   LIME (Local Interpretable Model-agnostic Explanations): 解釋單一樣本的預測結果。
-    -   Permutation Importance: 透過打亂特徵順序來評估特徵的重要性。
-    -   Partial Dependence Plots (PDP): 觀察單一特徵與模型預測之間的關係。
+explainability_05.py – Model Explainability Analysis
+Generates SHAP, LIME, permutation importance, and PDP visualizations.
 """
-# --- 穩定化設定與導入函式庫 ---
+# --- Stabilization Settings and Library Imports ---
 import os
-# 將此設定放在所有科學計算庫導入之前，以確保穩定
+# This setting is placed before importing scientific computing libraries to ensure stability.
 os.environ.setdefault("JOBLIB_MULTIPROCESSING", "0") 
 import json
 import logging
 import warnings
 from pathlib import Path
 
-# 設定 Matplotlib 後端為 'Agg'，使其可以在沒有 GUI 的環境下執行並存檔
+# Set Matplotlib backend to 'Agg' to allow saving figures in a non-GUI environment.
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -34,20 +24,21 @@ from lime.lime_tabular import LimeTabularExplainer
 from sklearn.inspection import PartialDependenceDisplay, permutation_importance
 from sklearn.model_selection import train_test_split
 
-# --- 本地模組 ---
+# --- Local Modules ---
 from paths import DIR_MODELS, DIR_EXPLAINABILITY
-from utils.data_loader import find_data_file, load_dataframe # <-- 導入共用模組
+from utils.data_loader import find_data_file, load_dataframe # <-- Import shared module
 
-# --- 全域設定 ---
+# --- Global Settings ---
 warnings.filterwarnings("ignore", category=UserWarning)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [%(levelname)s] - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-plt.rcParams['font.sans-serif'] = ['Microsoft JhengHei', 'Heiti TC', 'PingFang TC', 'sans-serif']
+# English plots do not require special CJK font settings.
+# plt.rcParams['font.sans-serif'] = ['Microsoft JhengHei', 'Heiti TC', 'PingFang TC', 'sans-serif']
 plt.rcParams['axes.unicode_minus'] = False
 plt.rcParams["figure.dpi"] = 140
 
-# --- 模型解釋核心類 ---
+# --- Core Model Explainer Class ---
 class ModelExplainer:
-    """封裝針對單一模型的完整可解釋性分析流程。"""
+    """Encapsulates the complete explainability analysis workflow for a single model."""
 
     def __init__(self, target: str):
         self.target = target
@@ -55,14 +46,14 @@ class ModelExplainer:
         self.output_dir = DIR_EXPLAINABILITY / self.target
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
-        # 預先載入所有必要的產出物
+        # Pre-load all necessary artifacts
         self._load_artifacts()
 
     def _load_artifacts(self):
-        """載入模型、數據與元數據。"""
-        logging.info(f"===== [載入中] target = {self.target} =====")
+        """Loads the model, data, and metadata, recreating the validation set using a rigorous time-series split."""
+        logging.info(f"===== [Loading] target = {self.target} =====")
         
-        # 1. 載入元數據
+        # 1. Load metadata
         card_path = self.model_dir / "dataset_card.json"
         schema_path = self.model_dir / "feature_schema.json"
         with open(card_path, 'r', encoding='utf-8') as f: self.card = json.load(f)
@@ -72,44 +63,63 @@ class ModelExplainer:
         self.seed = self.card['random_seed']
         self.data_path = Path(self.card['source_file'])
         
-        # 2. 載入模型
+        # 2. Load model
         model_path = self.model_dir / "best_model.joblib"
         self.model = joblib.load(model_path)
         
-        # 3. 載入數據並重現訓練/測試集
+        # 3. [CORE FIX] Load data and recreate the "time-series" train/test split
         df_all = load_dataframe(self.data_path)
         df_valid = df_all[df_all[self.target].notna()].copy()
         if self.target == 'rmssd_post': df_valid = df_valid[df_valid[self.target] > 0]
+
+        # If the dummy_flag column exists, filter for real data.
+        # Otherwise, assume all data is real.
+        if "dummy_flag" in df_valid.columns:
+            real_df = df_valid[df_valid["dummy_flag"] == 0].copy()
+        else:
+            real_df = df_valid.copy()
+        if 'end_apnea_time' not in real_df.columns:
+            raise ValueError("Missing 'end_apnea_time' column, cannot perform time-series split.")
         
-        X = df_valid[self.feature_cols]
-        y = df_valid[self.target]
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-            X, y, test_size=0.2, random_state=self.seed
-        )
-        self.X_imputed = self.model.named_steps["imputer"].transform(X)
+        real_df['end_apnea_time'] = pd.to_datetime(real_df['end_apnea_time'])
+        real_df_sorted = real_df.sort_values("end_apnea_time")
+        
+        split_idx = int(len(real_df_sorted) * 0.7)
+        train_df = real_df_sorted.iloc[:split_idx]
+        test_df = real_df_sorted.iloc[split_idx:]
+        
+        self.X_train = train_df[self.feature_cols]
+        self.y_train = train_df[self.target]
+        self.X_test = test_df[self.feature_cols]
+        self.y_test = test_df[self.target]
+
+        # For SHAP/LIME, we still need a complete, imputed version of X
+        X_full = df_valid[self.feature_cols]
+        self.X_imputed = self.model.named_steps["imputer"].transform(X_full)
+        # Note: SHAP is best explained on the full dataset, while Permutation Importance uses the test set.
 
     def run_all_explanations(self):
-        """依序執行所有可解釋性分析方法。"""
-        logging.info("開始生成 SHAP 分析圖...")
+        """Sequentially executes all explainability analysis methods."""
+        logging.info("Generating SHAP analysis plots...")
         self.generate_shap_plots()
 
-        logging.info("開始生成 LIME 分析圖...")
+        logging.info("Generating LIME analysis plot...")
         self.generate_lime_plot()
 
-        logging.info("開始生成 Permutation Importance 分析圖...")
+        logging.info("Generating Permutation Importance analysis plot...")
         self.generate_permutation_importance()
 
-        logging.info("開始生成 PDP 分析圖...")
+        logging.info("Generating Partial Dependence Plots (PDP)...")
         self.generate_pdp()
-        logging.info(f"===== [完成] {self.target} 的所有分析圖表已儲存至 {self.output_dir} =====")
+        logging.info(f"===== [Complete] All analysis plots for {self.target} have been saved to {self.output_dir} =====")
 
     def _save_fig(self, filename: str):
-        """統一的存圖函數。"""
+        """Unified function for saving plots."""
         path = self.output_dir / filename
         plt.tight_layout()
         plt.savefig(path, bbox_inches="tight")
         plt.close()
-        logging.info(f"圖表已儲存: {path}")
+        logging.info(f"Plot saved: {path}")
 
     def generate_shap_plots(self):
         try:
@@ -124,7 +134,7 @@ class ModelExplainer:
             shap.summary_plot(shap_values, feature_names=self.feature_cols, plot_type="bar", show=False)
             self._save_fig(f"shap_bar_{self.target}.png")
         except Exception as e:
-            logging.warning(f"SHAP 分析失敗: {e}")
+            logging.warning(f"SHAP analysis failed: {e}")
 
     def generate_lime_plot(self):
         try:
@@ -133,7 +143,7 @@ class ModelExplainer:
                 training_data=X_train_imputed, feature_names=self.feature_cols,
                 mode="regression", random_state=self.seed
             )
-            # 解釋測試集中間的一個樣本
+            # Explain a sample from the middle of the test set
             mid_idx = len(self.X_test) // 2
             instance = self.model.named_steps["imputer"].transform(self.X_test.iloc[mid_idx:mid_idx+1])[0]
             
@@ -142,10 +152,10 @@ class ModelExplainer:
                 num_features=min(10, len(self.feature_cols))
             )
             fig = exp.as_pyplot_figure()
-            fig.suptitle(f"LIME 解釋 (單一樣本) - {self.target}")
+            fig.suptitle(f"LIME Explanation (Single Instance) - {self.target}")
             self._save_fig(f"lime_instance_{self.target}.png")
         except Exception as e:
-            logging.warning(f"LIME 分析失敗: {e}")
+            logging.warning(f"LIME analysis failed: {e}")
 
     def generate_permutation_importance(self):
         try:
@@ -159,35 +169,60 @@ class ModelExplainer:
             plt.figure(figsize=(10, 8))
             importances.plot(kind="barh")
             plt.title(f"Permutation Importance - {self.target}")
-            plt.xlabel("效能下降量 (Performance Decrease)")
+            plt.xlabel("Performance Decrease")
             self._save_fig(f"permutation_importance_{self.target}.png")
         except Exception as e:
-            logging.warning(f"Permutation Importance 分析失敗: {e}")
+            logging.warning(f"Permutation Importance analysis failed: {e}")
             
     def generate_pdp(self):
+        """
+        Generates and saves Partial Dependence Plots (PDP).
+        This function is now robust enough to handle models with either 
+        .feature_importances_ (tree-based) or .coef_ (linear) attributes.
+        """
         try:
-            # 我們只為最重要的前 4 個特徵繪製 PDP
-            importances = pd.Series(
-                self.model.named_steps["model"].feature_importances_, 
-                index=self.feature_cols
-            ).sort_values(ascending=False)
-            top_features = importances.head(4).index.tolist()
+            # Extract the final regressor model from the pipeline
+            model_regressor = self.model.named_steps.get("model")
+            
+            # --- [CORE FIX] ---
+            # Check for feature importances (e.g., XGBoost) or coefficients (e.g., Ridge) 
+            # to determine feature importance.
+            if hasattr(model_regressor, 'feature_importances_'):
+                # For tree-based models, use feature_importances_ directly
+                importances = pd.Series(model_regressor.feature_importances_, index=self.feature_cols)
+            elif hasattr(model_regressor, 'coef_'):
+                # For linear models, use the absolute value of coefficients as the importance metric
+                importances = pd.Series(np.abs(model_regressor.coef_), index=self.feature_cols)
+            else:
+                # If neither attribute exists, log a warning and skip PDP analysis
+                logging.warning(f"Model for {self.target} has neither 'feature_importances_' nor 'coef_'. Skipping PDP.")
+                return
 
+            # Sort by importance and select the top 4 features for plotting
+            top_features = importances.sort_values(ascending=False).head(4).index.tolist()
+
+            # Use scikit-learn's built-in functionality to plot PDP
             PartialDependenceDisplay.from_estimator(
-                self.model, self.X_imputed, top_features, 
-                feature_names=self.feature_cols, n_cols=2
+                self.model, 
+                self.X_imputed, 
+                top_features, 
+                feature_names=self.feature_cols, 
+                n_cols=2
             )
+            
+            # Configure and save the figure
             fig = plt.gcf()
             fig.set_size_inches(12, 8)
             fig.suptitle(f"Partial Dependence Plots - {self.target}", fontsize=16)
             plt.subplots_adjust(top=0.9)
             self._save_fig(f"pdp_top4_{self.target}.png")
+            
         except Exception as e:
-            logging.warning(f"PDP 分析失敗: {e}")
+            logging.warning(f"PDP analysis failed: {e}")
 
-# --- 主執行流程 ---
+# --- Main Execution Flow ---
 def main():
-    """主執行函數，為每個目標建立 Explainer 並執行分析。"""
+    """Main function to create an Explainer for each target and run the analysis."""
     targets_str = os.environ.get("TARGETS", "ERS,rmssd_post").strip()
     targets = [t.strip() for t in targets_str.split(",") if t.strip()]
     
@@ -196,9 +231,9 @@ def main():
             explainer = ModelExplainer(target)
             explainer.run_all_explanations()
         except FileNotFoundError as e:
-            logging.error(f"無法為目標 '{target}' 進行分析，缺少必要檔案: {e}")
+            logging.error(f"Could not analyze target '{target}' due to missing files: {e}")
         except Exception as e:
-            logging.error(f"為目標 '{target}' 分析時發生未預期錯誤: {e}", exc_info=True)
+            logging.error(f"An unexpected error occurred while analyzing target '{target}': {e}", exc_info=True)
 
 if __name__ == "__main__":
     main()
