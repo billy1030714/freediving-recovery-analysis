@@ -1,5 +1,5 @@
 """
-explainability_05.py – Model Explainability Analysis
+05_explainability.py – Model Explainability Analysis
 Generates SHAP, LIME, permutation importance, and PDP visualizations.
 """
 # --- Stabilization Settings and Library Imports ---

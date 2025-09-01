@@ -1,0 +1,116 @@
+name: Regression Testing
+
+on:
+  schedule:
+    # Runs at 00:00 UTC every day (8:00 AM in Taiwan)
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  # Job 1: Run Track B (Prediction Boundary Exploration)
+  run-track-b:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run Track B Pipeline
+        env:
+          TASK_TYPE: "long_term"
+          TARGETS: "ERS"
+        run: |
+          python hrr_analysis/01_cleaning.py
+          python hrr_analysis/02_features.py
+          python hrr_analysis/04_models.py
+      - name: Upload Track B Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: artifacts-track-b
+          path: models/ERS/dataset_card.json
+
+  # Job 2: Run Track A (Algorithm Validation)
+  run-track-a:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run Track A Pipeline
+        env:
+          TASK_TYPE: "short_term"
+          TARGETS: "ERS"
+        run: |
+          python hrr_analysis/01_cleaning.py
+          python hrr_analysis/02_features.py
+          python hrr_analysis/04_models.py
+      - name: Check Quality Gate for Track A
+        run: python scripts/check_quality_gate.py --targets "ERS"
+      - name: Upload Track A Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: artifacts-track-a
+          path: models/ERS/dataset_card.json
+
+  # Job 3: Compare Track A results with its baseline
+  compare-baseline-a:
+    runs-on: ubuntu-latest
+    needs: run-track-a
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Download Current A-Track Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: artifacts-track-a
+          path: current_results/
+      - name: Compare with Baseline
+        run: |
+          python scripts/compare_regression_baseline.py \
+            --current-card current_results/dataset_card.json \
+            --baseline-card tests/baselines/baseline_card_A.json
+
+  # Job 4: Compare Track B results with its baseline
+  compare-baseline-b:
+    runs-on: ubuntu-latest
+    needs: run-track-b
+    steps:
+      - uses: actions/checkout@v3
+      # --- FIX: Added missing Python setup and dependency installation ---
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      # --- End of FIX ---
+      - name: Download Current B-Track Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: artifacts-track-b
+          path: current_results/
+      - name: Compare with Baseline
+        run: |
+          python scripts/compare_regression_baseline.py \
+            --current-card current_results/dataset_card.json \
+            --baseline-card tests/baselines/baseline_card_B.json

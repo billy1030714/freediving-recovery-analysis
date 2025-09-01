@@ -1,5 +1,5 @@
 """
-features_02.py – Heart Rate Recovery Feature Engineering
+02_features.py – Heart Rate Recovery Feature Engineering
 Calculates recovery features and contextual metrics.
 """
 # --- Library Imports ---

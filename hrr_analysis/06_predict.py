@@ -1,5 +1,5 @@
 """
-predict_06.py – Model Prediction and Explanation Script
+06_predict.py – Model Prediction and Explanation Script
 Generates predictions and explanations using trained models.
 """
 # --- Stabilization Settings and Library Imports ---
