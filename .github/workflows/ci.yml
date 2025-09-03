@@ -79,6 +79,7 @@ jobs:
     - name: Generate Features for Quality Check
       env:
         XML_FILENAME: "sample_export.xml"
+        PYTHONPATH: .
       run: |
         python hrr_analysis/01_cleaning.py
         python hrr_analysis/02_features.py
