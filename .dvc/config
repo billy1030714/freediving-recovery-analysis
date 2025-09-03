@@ -1,5 +1,0 @@
-[core]
-    remote = gcs
-['remote "gcs"']
-    url = gs://hrr-pipeline-data-20250903
-    credentialpath = ../.credentials/credentials.json

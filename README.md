@@ -72,20 +72,20 @@ poetry run dvc repro
 
 #### Option 2: Manual Execution
 ```bash
-# Research Track (default)
+# Product Track (recommended first run: validates ERS algorithm design)
+export TASK_TYPE=short_term
+export TARGETS=ERS
+poetry run python hrr_analysis/04_models.py
+poetry run python hrr_analysis/05_explainability.py
+poetry run python hrr_analysis/08_report.py
+
+# Research Track (advanced: strict predictability assessment)
 export TASK_TYPE=long_term
 export TARGETS="ERS,rmssd_post"
 poetry run python hrr_analysis/04_models.py
 poetry run python hrr_analysis/05_explainability.py
 poetry run python hrr_analysis/06_predict.py --fast
 poetry run python hrr_analysis/07_visualize.py
-poetry run python hrr_analysis/08_report.py
-
-# Product Track (for ERS validation)
-export TASK_TYPE=short_term  
-export TARGETS=ERS
-poetry run python hrr_analysis/04_models.py
-poetry run python hrr_analysis/05_explainability.py
 poetry run python hrr_analysis/08_report.py
 ```
 
@@ -194,7 +194,7 @@ SHAP analysis in the Product Track confirms that `recovery_ratio_60s`, `recovery
 ## 🚀 CI/CD Integration
 
 ### DVC Pipeline Benefits
-- **Reproducibility**: Version-controlled data and experiments
+- **Reproducibility**: Version-controlled pipeline and experiments
 - **Automation**: One-command full pipeline execution (`dvc repro`)
 - **Dependency Tracking**: Automatic stage dependency resolution
 - **CI Integration**: Automated pipeline validation in GitHub Actions

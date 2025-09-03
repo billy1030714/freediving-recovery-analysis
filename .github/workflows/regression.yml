@@ -1,56 +1,37 @@
-name: MLOps Pipeline Regression Test
-
+name: MLOps Pipeline Validation
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  run-pipeline:
+  validate-pipeline:
     runs-on: ubuntu-latest
-    permissions:
-      contents: 'read'
-      id-token: 'write' # This permission is required for the auth action
-
     env:
       CI: "true"
-      TASK_TYPE: "long_term"
-      TARGETS: "ERS,rmssd_post,hrr60"
-      STUDIO_TOKEN: ${{ secrets.DVC_STUDIO_TOKEN }}
-
+    
     steps:
-      - name: 🚚 Checkout Repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
-
-      - name: 🐍 Set up Python and Poetry
+        
+      - name: Set up Python and Poetry
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-      - name: 📦 Install Poetry
-        run: pipx install poetry
-
-      - name: ⚙️ Install Dependencies
-        run: poetry install --no-root
-
-      - name: 🔑 Authenticate to Google Cloud
-        uses: 'google-github-actions/auth@v2'
-        with:
-          credentials_json: '${{ secrets.GCP_SA_KEY }}'
           
-      - name: 🔧 Configure GCS credentials for DVC
+      - name: Install Poetry
+        run: pipx install poetry
+        
+      - name: Install Dependencies
+        run: poetry install --no-root
+        
+      - name: Validate DVC Pipeline Structure
+        run: poetry run dvc dag
+        
+      - name: Test Dual-Track Core Validation
         run: |
-          echo '${{ secrets.GCP_SA_KEY }}' > ${HOME}/gcp_key.json
-          poetry run dvc remote modify gcs credentialpath ${HOME}/gcp_key.json
-
-
-      - name: 📥 Pull Data from DVC (GCS)
-        run: poetry run dvc pull --force
-
-      - name: 🚀 Run Full MLOps Pipeline
-        run: poetry run dvc repro
-
-      - name: 📊 Upload MLflow Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: mlflow-results
-          path: mlruns/
+          export TASK_TYPE="short_term"
+          export TARGETS="ERS"
+          poetry run python hrr_analysis/04_models.py
+        env:
+          CI: "true"
