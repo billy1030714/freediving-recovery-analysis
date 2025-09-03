@@ -36,6 +36,12 @@ jobs:
         uses: 'google-github-actions/auth@v2'
         with:
           credentials_json: '${{ secrets.GCP_SA_KEY }}'
+          
+      - name: 🔧 Configure GCS credentials for DVC
+        run: |
+          echo '${{ secrets.GCP_SA_KEY }}' > ${HOME}/gcp_key.json
+          poetry run dvc remote modify gcs credentialpath ${HOME}/gcp_key.json
+
 
       - name: 📥 Pull Data from DVC (GCS)
         run: poetry run dvc pull --force
