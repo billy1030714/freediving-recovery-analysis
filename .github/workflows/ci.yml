@@ -73,6 +73,7 @@ jobs:
     
     - name: Prepare test data
       run: |
+        mkdir -p apple_health_export
         cp tests/data/sample_export.xml apple_health_export/sample_export.xml
     
     - name: Generate Features for Quality Check
@@ -106,6 +107,7 @@ jobs:
     # This script will execute the entire pipeline and compare with golden standard
     - name: Prepare test data for regression
       run: |
+        mkdir -p apple_health_export
         cp tests/data/sample_export.xml apple_health_export/sample_export.xml
     
     - name: Run Regression Tests
