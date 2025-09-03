@@ -44,7 +44,9 @@ apple_health_export/*
 !apple_health_export/*.dvc
 !apple_health_export/.gitkeep
 
-converted/
+converted/*
+!converted/*_ci*
+
 features/
 !features/.gitkeep
 models/
