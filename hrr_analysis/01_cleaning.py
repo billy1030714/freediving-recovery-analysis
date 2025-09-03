@@ -4,6 +4,8 @@ Parses heart rate data and manages apnea events.
 """
 
 # --- Library Imports ---
+import os
+import yaml
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
@@ -17,13 +19,10 @@ from paths import (
     get_daily_path
 )
 
-# --- Constants ---
-HR_MIN, HR_MAX = 30, 200 # Valid heart rate range (min and max)
-
 # --- Function Definitions ---
 
-def parse_hr_from_xml(xml_path: Path, today_date: datetime.date) -> None:
-    """Parses heart rate data from export.xml, cleans it, and saves it as a CSV."""
+def parse_hr_from_xml(xml_path: Path, today_date: datetime.date, hr_min: int, hr_max: int) -> pd.DataFrame:
+    """Parses heart rate data from export.xml, cleans it, and returns a DataFrame."""
     if not xml_path.exists():
         raise FileNotFoundError(f"Apple Health's export.xml not found. Please check the path: {xml_path}")
 
@@ -53,10 +52,8 @@ def parse_hr_from_xml(xml_path: Path, today_date: datetime.date) -> None:
     if df["HR"].isna().any():
         imputer = KNNImputer(n_neighbors=3)
         df["HR"] = imputer.fit_transform(df[["HR"]])
-
-    out_hr_path = get_daily_path(DIR_CONVERTED, 'hr', today_date, '.csv')
-    df.to_csv(out_hr_path, index=False, date_format="%Y-%m-%d %H:%M:%S")
-    print(f"✅ Today's heart rate data has been saved: {out_hr_path} ({len(df)} rows)")
+    
+    return df
 
 def load_historical_apnea_events(directory: Path) -> pd.DataFrame:
     """Scans the `converted` directory for all apnea_events_*.csv files, then merges and deduplicates them."""
@@ -109,26 +106,58 @@ def input_new_apnea_events() -> pd.DataFrame:
     return df[["row_id", "end_apnea"]]
 
 def main():
-    """Main execution function."""
+    """Main execution function with CI/CD support."""
+    # --- Step 1: Load config and setup environment ---
+    with open("params.yaml", "r") as f:
+        params = yaml.safe_load(f)
+    
+    is_ci = os.getenv('CI') or os.getenv('GITHUB_ACTIONS')
+    file_suffix = '_ci' if is_ci else ''
+    
     DIR_CONVERTED.mkdir(parents=True, exist_ok=True)
-    
     today_date = datetime.now().date()
-    print(f"\n===== Starting Data Cleaning for {today_date.strftime('%Y-%m-%d')} =====")
-
-    parse_hr_from_xml(FILE_APPLE_HEALTH_XML, today_date)
-
-    historical_events = load_historical_apnea_events(DIR_CONVERTED)
-    new_events = input_new_apnea_events()
     
-    if new_events.empty:
+    print(f"\n===== Starting Data Cleaning for {today_date.strftime('%Y-%m-%d')} =====")
+    if is_ci:
+        print("CI environment detected. Using de-identification logic.")
+
+    # --- Step 2: Parse and clean HR data ---
+    df_hr = parse_hr_from_xml(
+        FILE_APPLE_HEALTH_XML,
+        today_date,
+        hr_min=params['data_cleaning']['hr_min'],
+        hr_max=params['data_cleaning']['hr_max']
+    )
+    
+    # If in CI, de-identify the DataFrame in-place
+    if is_ci:
+        df_hr['Time'] = (df_hr['Time'] - df_hr['Time'].min()).dt.total_seconds()
+        print("✅ HR data has been de-identified (timestamps converted to relative seconds).")
+
+    # --- Step 3: Save HR data ---
+    out_hr_path = get_daily_path(DIR_CONVERTED, f'hr{file_suffix}', today_date, '.csv')
+    df_hr.to_csv(out_hr_path, index=False, date_format="%Y-%m-%d %H:%M:%S")
+    print(f"✅ Heart rate data saved: {out_hr_path} ({len(df_hr)} rows)")
+
+    # --- Step 4: Handle Apnea Events based on environment ---
+    # (The rest of the function remains the same as your version)
+    historical_events = load_historical_apnea_events(DIR_CONVERTED)
+    
+    if is_ci:
+        new_events = pd.DataFrame(columns=["row_id", "end_apnea"])
+        print("CI mode: Skipping interactive apnea event input.")
         merged_events = historical_events.copy()
     else:
-        merged_events = pd.concat([historical_events, new_events], ignore_index=True)
-        merged_events = merged_events.drop_duplicates(subset=["row_id"]).sort_values("end_apnea").reset_index(drop=True)
+        new_events = input_new_apnea_events()
+        if new_events.empty:
+            merged_events = historical_events.copy()
+        else:
+            merged_events = pd.concat([historical_events, new_events], ignore_index=True)
+            merged_events = merged_events.drop_duplicates(subset=["row_id"]).sort_values("end_apnea").reset_index(drop=True)
 
-    out_apnea_path = get_daily_path(DIR_CONVERTED, 'apnea_events', today_date, '.csv')
+    out_apnea_path = get_daily_path(DIR_CONVERTED, f'apnea_events{file_suffix}', today_date, '.csv')
     merged_events.to_csv(out_apnea_path, index=False, date_format="%Y-%m-%d %H:%M:%S")
-    print(f"\n✅ Cumulative apnea events have been saved: {out_apnea_path} ({len(merged_events)} events)")
+    print(f"\n✅ Cumulative apnea events saved: {out_apnea_path} ({len(merged_events)} events)")
     print("===== Processing Complete =====")
 
 # --- Script execution entry point ---

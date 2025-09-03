@@ -1,0 +1,36 @@
+# === Data Cleaning & Feature Engineering Parameters ===
+data_cleaning:
+  hr_min: 30
+  hr_max: 200
+
+feature_engineering:
+  base_window: [330, 150]
+  slope_w1: [30, 90]
+  slope_w2: [45, 105]
+  peak_max_seconds: 120
+  hrv_window: [180, 360]
+
+# === Model Training Parameters ===
+training:
+  random_seed: 42
+  split_ratio: 0.7 # Time-series split: 70% train, 30% test
+  quality_gate_threshold: 0.05
+
+models:
+  xgb:
+    n_estimators: 600
+    max_depth: 4
+    learning_rate: 0.05
+    subsample: 0.9
+    colsample_bytree: 0.9
+    reg_lambda: 1.0
+    reg_alpha: 0.0
+    n_jobs: -1
+    tree_method: "hist"
+  rf:
+    n_estimators: 600
+    max_depth: null
+    min_samples_leaf: 2
+    n_jobs: -1
+  ridge:
+    alpha: 1.0

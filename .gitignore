@@ -3,6 +3,9 @@
 # Combined and cleaned version
 # ===================================================================
 
+# Ignore credentials
+.credentials/
+
 # --- Byte-compiled / Optimized / C extensions ---
 __pycache__/
 *.py[cod]

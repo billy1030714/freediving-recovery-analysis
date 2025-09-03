@@ -12,29 +12,19 @@ import pandas as pd
 from paths import DIR_FEATURES
 
 def find_data_file() -> Path:
-    """
-    Search for available data files in the features directory, following a priority order.
-    Parquet format is preferred, and support is provided for specifying the file via an environment variable.
-    """
-    # 1. Read path from environment variable to provide maximum flexibility
-    env_path = os.environ.get("DATA_FILE", "").strip()
-    if env_path and Path(env_path).exists():
-        logging.info(f"Locate data file from environment variable DATA_FILE: {env_path}")
-        return Path(env_path)
+    """Finds the correct feature file, respecting the CI environment variable."""
+    is_ci = os.getenv('CI') or os.getenv('GITHUB_ACTIONS')
+    file_suffix = '_ci' if is_ci else ''
+    
+    parquet_path = DIR_FEATURES / f"features_ml{file_suffix}.parquet"
+    csv_path = DIR_FEATURES / f"features{file_suffix}.csv"
+
+    if parquet_path.exists() and parquet_path.stat().st_size > 0:
+        return parquet_path
+    if csv_path.exists() and csv_path.stat().st_size > 0:
+        return csv_path
         
-    # 2. Search according to the default priority order
-    candidates = [
-        DIR_FEATURES / "features_ml_aug.parquet",
-        DIR_FEATURES / "features_aug.csv",
-        DIR_FEATURES / "features_ml.parquet",
-        DIR_FEATURES / "features.csv",
-    ]
-    for path in candidates:
-        if path.exists():
-            logging.info(f"# Locate data file from the default path: {path}")
-            return path
-            
-    raise FileNotFoundError(f"Locate data file in the features directory {DIR_FEATURES} No available data file found in the features directory.")
+    raise FileNotFoundError(f"No feature file found (searched for {parquet_path.name} and {csv_path.name})")
 
 def load_dataframe(path: Path) -> pd.DataFrame:
     """Load DataFrame from the specified path based on file extension."""

@@ -8,6 +8,9 @@
 """
 
 # --- Library Imports ---
+import mlflow
+import mlflow.sklearn
+import yaml
 import argparse, json, logging, os, warnings
 from pathlib import Path
 from typing import List, Dict, Any, Tuple
@@ -26,17 +29,13 @@ from utils.data_loader import find_data_file, load_dataframe
 warnings.filterwarnings("ignore", category=UserWarning)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [%(levelname)s] - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 RANDOM_SEED = 42
-MODEL_CONFIG = {
-    "xgb": {"n_estimators": 600, "max_depth": 4, "learning_rate": 0.05, "subsample": 0.9, "colsample_bytree": 0.9, "reg_lambda": 1.0, "reg_alpha": 0.0, "random_state": RANDOM_SEED, "n_jobs": -1, "tree_method": "hist"},
-    "rf": {"n_estimators": 600, "max_depth": None, "min_samples_leaf": 2, "random_state": RANDOM_SEED, "n_jobs": -1},
-    "ridge": {"alpha": 1.0, "random_state": RANDOM_SEED}
-}
 
 class ModelTrainer:
     """A class to encapsulate the model training and evaluation workflow."""
-    def __init__(self, target_name: str, seed: int):
+    def __init__(self, target_name: str, seed: int, model_params: Dict):
         self.target = target_name
         self.seed = seed
+        self.model_params = model_params
         self.output_dir = DIR_MODELS / self.target
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.dummy_df = pd.DataFrame()
@@ -197,31 +196,45 @@ class ModelTrainer:
 
     def _train_and_evaluate(self, X_train, X_test, y_train, y_test) -> tuple:
         """Trains multiple models and evaluates them to find the best one."""
-        # --- DEBUG PROBE (ARCHIVED FOR FUTURE USE) ---
-        # if self.target == 'ERS':
-        #     logging.info("===== Debug Probe: Checking training data for ERS model =====")
-        #     logging.info(f"y_train (ERS) stats:\n{y_train.describe().to_string()}")
-        #     logging.info(f"X_train columns:\n{X_train.columns.tolist()}")
-        #     logging.info("==================== End of Debug Probe ====================")
-        
+        # Log autologging for scikit-learn for comprehensive tracking
+        mlflow.sklearn.autolog()
+
         models_to_train = {
-            "xgb": Pipeline([("imputer", SimpleImputer(strategy="median")), ("model", xgb.XGBRegressor(**MODEL_CONFIG["xgb"]))]),
-            "rf": Pipeline([("imputer", SimpleImputer(strategy="median")), ("model", RandomForestRegressor(**MODEL_CONFIG["rf"]))]),
-            "ridge": Pipeline([("imputer", SimpleImputer(strategy="median")), ("model", Ridge(**MODEL_CONFIG["ridge"]))]),
+            "xgb": Pipeline([("imputer", SimpleImputer(strategy="median")), ("model", xgb.XGBRegressor(**self.model_params["xgb"], random_state=self.seed))]),
+            "rf": Pipeline([("imputer", SimpleImputer(strategy="median")), ("model", RandomForestRegressor(**self.model_params["rf"], random_state=self.seed))]),
+            "ridge": Pipeline([("imputer", SimpleImputer(strategy="median")), ("model", Ridge(**self.model_params["ridge"], random_state=self.seed))]),
         }
         leaderboard, best_model_info = [], {"r2": -1e9}
         
         for name, pipe in models_to_train.items():
-            pipe.fit(X_train, y_train)
-            y_pred = pipe.predict(X_test)
-            metrics = {"name": name, "r2": r2_score(y_test, y_pred), "mae": mean_absolute_error(y_test, y_pred), "rmse": np.sqrt(mean_squared_error(y_test, y_pred))}
-            leaderboard.append(metrics)
-            logging.info(f"[Evaluation] {name}: R²={metrics['r2']:.4f} | MAE={metrics['mae']:.4f} | RMSE={metrics['rmse']:.4f}")
-            if metrics["r2"] > best_model_info["r2"]:
-                best_model_info = metrics.copy()
-                best_model_info["pipeline"] = pipe
+            with mlflow.start_run(run_name=f"train_{name}", nested=True):
+                pipe.fit(X_train, y_train)
+                y_pred = pipe.predict(X_test)
                 
+                metrics = {
+                    "r2": r2_score(y_test, y_pred),
+                    "mae": mean_absolute_error(y_test, y_pred),
+                    "rmse": np.sqrt(mean_squared_error(y_test, y_pred))
+                }
+                
+                # Log metrics to MLflow
+                mlflow.log_metrics(metrics)
+                
+                metrics["name"] = name
+                leaderboard.append(metrics)
+                logging.info(f"[Evaluation] {name}: R²={metrics['r2']:.4f} | MAE={metrics['mae']:.4f} | RMSE={metrics['rmse']:.4f}")
+                
+                if metrics["r2"] > best_model_info["r2"]:
+                    best_model_info = metrics.copy()
+                    best_model_info["pipeline"] = pipe
+                    
         logging.info(f"[Best Model] The winner of this run is: {best_model_info['name']} (R² = {best_model_info['r2']:.4f})")
+        
+        # Log best model separately
+        mlflow.sklearn.log_model(best_model_info["pipeline"], "best_model")
+        mlflow.log_metric("best_model_r2", best_model_info["r2"])
+        mlflow.set_tag("best_model_name", best_model_info["name"])
+        
         return leaderboard, best_model_info
 
     def _save_artifacts(self, best_model_info, leaderboard, feature_columns, dataset_metadata, data_path):
@@ -295,10 +308,12 @@ class ModelTrainer:
 
 def main():
     """Main function to run the training process for all specified targets."""
-    # Get configuration from environment variables
+    # --- Step 1: Load config and data ---
+    with open("params.yaml", "r") as f:
+        params = yaml.safe_load(f)
+        
     targets_str = os.environ.get("TARGETS", "ERS,rmssd_post").strip()
     task_type = os.environ.get("TASK_TYPE", "long_term").strip()
-    
     targets = [t.strip() for t in targets_str.split(",") if t.strip()]
     
     logging.info("="*60)
@@ -308,19 +323,30 @@ def main():
     logging.info("="*60)
     
     try:
-        data_path = find_data_file()
+        data_path = find_data_file() # This function needs to be aware of CI
         df = load_dataframe(data_path)
         logging.info(f"Loaded dataset: {data_path} ({len(df)} samples)")
         
+        # --- Step 2: Iterate and train for each target with MLflow ---
         for target in targets:
-            logging.info(f"\n{'='*50}")
-            logging.info(f"PROCESSING TARGET: {target}")
-            logging.info(f"{'='*50}")
-            
-            trainer = ModelTrainer(target_name=target, seed=RANDOM_SEED)
-            trainer.run(df, data_path)
-            
-            logging.info(f"Completed training for target: {target}")
+            # Each target gets its own parent run in MLflow
+            with mlflow.start_run(run_name=f"Target_{target}") as parent_run:
+                mlflow.log_param("target_variable", target)
+                mlflow.log_param("task_type", task_type)
+                mlflow.set_tag("mlflow.runName", f"Target_{target}_{task_type}")
+
+                logging.info(f"\n{'='*50}")
+                logging.info(f"PROCESSING TARGET: {target}")
+                logging.info(f"{'='*50}")
+                
+                trainer = ModelTrainer(
+                    target_name=target, 
+                    seed=params['training']['random_seed'],
+                    model_params=params['models']
+                )
+                trainer.run(df, data_path)
+                
+                logging.info(f"Completed training for target: {target}")
             
     except Exception as e:
         logging.error(f"An unexpected error occurred in the main process: {e}", exc_info=True)

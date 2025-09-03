@@ -1,114 +1,45 @@
-name: Regression Testing
+name: MLOps Pipeline Regression Test
 
 on:
-  schedule:
-    # Runs at 00:00 UTC every day (8:00 AM in Taiwan)
-    - cron: '0 0 * * *'
+  push:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  # Job 1: Run Track B (Prediction Boundary Exploration)
-  run-track-b:
+  run-pipeline:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.9
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Run Track B Pipeline
-        env:
-          TASK_TYPE: "long_term"
-          TARGETS: "ERS"
-        run: |
-          python hrr_analysis/01_cleaning.py
-          python hrr_analysis/02_features.py
-          python hrr_analysis/04_models.py
-      - name: Upload Track B Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: artifacts-track-b
-          path: models/ERS/dataset_card.json
+    env:
+      CI: "true" # 啟用 CI 模式，跳過互動輸入
+      TASK_TYPE: "long_term" # 設定為研究軌道
+      TARGETS: "ERS,rmssd_post,hrr60" # 要訓練的目標
 
-  # Job 2: Run Track A (Algorithm Validation)
-  run-track-a:
-    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.9
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Run Track A Pipeline
-        env:
-          TASK_TYPE: "short_term"
-          TARGETS: "ERS"
-        run: |
-          python hrr_analysis/01_cleaning.py
-          python hrr_analysis/02_features.py
-          python hrr_analysis/04_models.py
-      - name: Check Quality Gate for Track A
-        run: python scripts/check_quality_gate.py --targets "ERS"
-      - name: Upload Track A Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: artifacts-track-a
-          path: models/ERS/dataset_card.json
+      - name: 🚚 Checkout Repository
+        uses: actions/checkout@v4
 
-  # Job 3: Compare Track A results with its baseline
-  compare-baseline-a:
-    runs-on: ubuntu-latest
-    needs: run-track-a
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python
+      - name: 🐍 Set up Python and Poetry
         uses: actions/setup-python@v4
         with:
-          python-version: 3.9
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Download Current A-Track Artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: artifacts-track-a
-          path: current_results/
-      - name: Compare with Baseline
-        run: |
-          python scripts/compare_regression_baseline.py \
-            --current-card current_results/dataset_card.json \
-            --baseline-card tests/baselines/baseline_card_A.json
+          python-version: '3.9'
+      - name: 📦 Install Poetry
+        run: pipx install poetry
 
-  # Job 4: Compare Track B results with its baseline
-  compare-baseline-b:
-    runs-on: ubuntu-latest
-    needs: run-track-b
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: ⚙️ Install Dependencies
+        run: poetry install --no-root
+
+      - name: 🔑 Authenticate to Google Cloud
+        uses: 'google-github-actions/auth@v2'
         with:
-          python-version: 3.9
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Download Current B-Track Artifact
-        uses: actions/download-artifact@v3
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: 📥 Pull Data from DVC (GCS)
+        run: poetry run dvc pull --force
+
+      - name: 🚀 Run Full MLOps Pipeline
+        run: poetry run dvc repro
+
+      - name: 📊 Upload MLflow Artifacts
+        uses: actions/upload-artifact@v4
         with:
-          name: artifacts-track-b
-          path: current_results/
-      - name: Compare with Baseline
-        run: |
-          python scripts/compare_regression_baseline.py \
-            --current-card current_results/dataset_card.json \
-            --baseline-card tests/baselines/baseline_card_B.json
+          name: mlflow-results
+          path: mlruns/
