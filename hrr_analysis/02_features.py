@@ -278,9 +278,21 @@ def merge_and_finalize(new_features: List[Dict], features_dir: Path) -> pd.DataF
     if not new_features:
         logging.warning("No new features were generated. Reading from existing file if available.")
         features_csv_path = features_dir / "features.csv"
+        parquet_path = features_dir / "features_ml.parquet"
+
         if features_csv_path.exists():
-            return pd.read_csv(features_csv_path)
-        return pd.DataFrame()
+            df = pd.read_csv(features_csv_path)
+        else:
+            df = pd.DataFrame()
+
+        features_dir.mkdir(exist_ok=True, parents=True)
+        try:
+            df.to_parquet(parquet_path, index=False)
+            logging.info(f"Saved (possibly empty) Parquet file: {parquet_path}")
+        except Exception as e:
+            logging.warning(f"Could not save as Parquet format: {e}")
+
+        return df
 
     new_df = pd.DataFrame(new_features)
     features_csv_path = features_dir / "features.csv"
