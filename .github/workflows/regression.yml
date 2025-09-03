@@ -28,10 +28,9 @@ jobs:
       - name: Validate DVC Pipeline Structure
         run: poetry run dvc dag
         
-      - name: Test Dual-Track Core Validation
+      - name: Test Product Track Algorithm Validation
         run: |
           export TASK_TYPE="short_term"
           export TARGETS="ERS"
-          PYTHONPATH=${{ github.workspace }} poetry run python hrr_analysis/04_models.py
-        env:
-          CI: "true"
+          poetry run python hrr_analysis/02_features.py
+          poetry run python hrr_analysis/04_models.py
