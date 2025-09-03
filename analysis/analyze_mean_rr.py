@@ -13,6 +13,7 @@ from sklearn.inspection import permutation_importance
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score, mean_absolute_error
 from utils.data_loader import find_data_file, load_dataframe
+from scipy.stats import pearsonr
 
 # Set chart style
 plt.style.use('seaborn-v0_8-whitegrid')
@@ -126,8 +127,8 @@ def analyze_mean_rr_post():
         
         # Correlation in test set
         baseline_values = test_df['HRbaseline'].fillna(test_df['HRbaseline'].median())
-        correlation = np.corrcoef(baseline_values, y_test)[0,1]
-        print(f"Test set HRbaseline vs mean_rr_post correlation: {correlation:.4f}")
+        correlation, p_value = pearsonr(baseline_values, y_test)
+        print(f"Test set HRbaseline vs mean_rr_post correlation: {correlation:.4f} (p = {p_value:.6f})")
         
     else:
         print("HRbaseline not found in feature set")
@@ -141,8 +142,8 @@ def analyze_mean_rr_post():
         df_valid_clean['theoretical_rr'] = 60000 / df_valid_clean['HRbaseline']
         
         # Correlation across full dataset
-        total_correlation = df_valid_clean['theoretical_rr'].corr(df_valid_clean['mean_rr_post'])
-        print(f"Full dataset: Theoretical RR vs Actual RR correlation: {total_correlation:.4f}")
+        total_correlation, total_p_value = pearsonr(df_valid_clean['theoretical_rr'], df_valid_clean['mean_rr_post'])
+        print(f"Full dataset: Theoretical RR vs Actual RR correlation: {total_correlation:.4f} (p = {total_p_value:.6f})")
         
         # Statistical summary
         print("\nStatistical summary:")

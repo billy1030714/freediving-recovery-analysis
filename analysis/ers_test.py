@@ -1,6 +1,6 @@
 # ers_tolerance_validation.py
-# 驗證不同容忍區間對 ERS 特徵產出的影響
-# 基於原始 features_02.py 的邏輯，測試 ±1, ±2, ±3 秒容忍度
+# Validate the effect of different tolerance intervals on ERS feature outputs
+# Based on the logic of original features_02.py, testing ±1, ±2, ±3 second tolerances
 
 import pandas as pd
 import numpy as np
@@ -12,17 +12,17 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [%(levelname)s] - %(message)s')
 
 class ERSToleranceValidator:
-    """ERS 容忍度驗證器"""
+    """ERS Tolerance Validator"""
     
     def __init__(self):
-        # 基於 features_02.py 的配置
+        # Configuration based on features_02.py
         self.BASE_WINDOW = (330, 150)  # baseline window: -330s to -150s
         self.SLOPE_W1 = (30, 90)       # slope window 1: 30s to 90s
         self.SLOPE_W2 = (45, 105)      # slope window 2: 45s to 105s  
         self.PEAK_MAX_SECONDS = 120    # peak search window: 0s to 120s
         
     def _get_hr_with_tolerance(self, df: pd.DataFrame, target_time: pd.Timestamp, tol: int = 3) -> Optional[float]:
-        """根據容忍度獲取指定時間點的心率"""
+        """Get heart rate at a specific time within tolerance"""
         df_win = df[(df["Time"] >= target_time - timedelta(seconds=tol)) &
                     (df["Time"] <= target_time + timedelta(seconds=tol))]
         if df_win.empty:
@@ -33,7 +33,7 @@ class ERSToleranceValidator:
         return df_win.loc[idx, "HR"]
 
     def _lin_slope_with_tolerance(self, df: pd.DataFrame, ts: pd.Timestamp, te: pd.Timestamp, tol: int = 3) -> Optional[float]:
-        """根據容忍度計算線性斜率"""
+        """Calculate linear slope within tolerance"""
         win_df = df[(df["Time"] >= ts - timedelta(seconds=tol)) & 
                     (df["Time"] <= te + timedelta(seconds=tol))]
         if len(win_df) < 2:
@@ -51,12 +51,12 @@ class ERSToleranceValidator:
             return None
 
     def _clip01(self, v):
-        """將數值限制在 [0, 1] 區間"""
+        """Clip values to [0, 1] range"""
         return float(np.clip(v, 0.0, 1.0)) if v is not None and np.isfinite(v) else None
 
     def _get_dynamic_ideal_slope(self, starting_hr: float, resting_hr: float = 60.0, 
                                 peak_hr: float = 130.0, max_ideal_slope: float = 1.0) -> float:
-        """動態理想斜率計算"""
+        """Dynamic ideal slope calculation"""
         if starting_hr <= resting_hr:
             return 0.1
         
@@ -65,7 +65,7 @@ class ERSToleranceValidator:
         return max(0.1, ideal_slope)
 
     def analyze_event_with_tolerance(self, hr_df: pd.DataFrame, end_apnea_time: pd.Timestamp, tolerance: int = 3) -> Optional[Dict]:
-        """使用指定容忍度分析單個呼吸中止事件"""
+        """Analyze a single apnea event using specified tolerance"""
         if pd.isna(end_apnea_time):
             return None
             
@@ -75,12 +75,12 @@ class ERSToleranceValidator:
             
         event_t0 = end_apnea_time
         
-        # 1. 計算 baseline
+        # 1. Calculate baseline
         base_df = df[(df["Time"] >= event_t0 - timedelta(seconds=self.BASE_WINDOW[0])) &
                      (df["Time"] < event_t0 - timedelta(seconds=self.BASE_WINDOW[1]))]
         baseline = base_df["HR"].mean() if not base_df.empty else None
         
-        # 2. 計算 peak
+        # 2. Calculate peak
         peak_search_df = df[(df["Time"] >= event_t0) &
                            (df["Time"] <= event_t0 + timedelta(seconds=self.PEAK_MAX_SECONDS))]
         if peak_search_df.empty or peak_search_df['HR'].isnull().all():
@@ -89,7 +89,7 @@ class ERSToleranceValidator:
         if pd.isna(peak):
             return None
 
-        # 3. 計算斜率（使用指定容忍度）
+        # 3. Calculate slope (with specified tolerance)
         time_peak_hr_timestamp = peak_search_df.loc[peak_search_df['HR'].idxmax(), 'Time']
         time_to_peak_hr = (time_peak_hr_timestamp - event_t0).total_seconds()
         slope_window_config = self.SLOPE_W1 if time_to_peak_hr <= 30 else self.SLOPE_W2
@@ -98,7 +98,7 @@ class ERSToleranceValidator:
         is_peak_abnormal = (time_to_peak_hr > 45) or (ts_slope <= time_peak_hr_timestamp <= te_slope)
         slope = np.nan if is_peak_abnormal else self._lin_slope_with_tolerance(df, ts_slope, te_slope, tol=tolerance)
 
-        # 4. 計算恢復比率（使用指定容忍度）
+        # 4. Calculate recovery ratios (with specified tolerance)
         hr60 = self._get_hr_with_tolerance(df, event_t0 + timedelta(seconds=60), tol=tolerance)
         hr90 = self._get_hr_with_tolerance(df, event_t0 + timedelta(seconds=90), tol=tolerance)
         
@@ -111,7 +111,7 @@ class ERSToleranceValidator:
         rr60, rr90 = _rr(hr60), _rr(hr90)
         hrr60 = (peak - hr60) if peak is not None and hr60 is not None else None
 
-        # 5. 計算標準化斜率
+        # 5. Calculate normalized slope
         normalized_slope = None
         if slope is not None and np.isfinite(slope):
             hr_slope_start = self._get_hr_with_tolerance(df, ts_slope, tol=tolerance)
@@ -124,7 +124,7 @@ class ERSToleranceValidator:
                 )
                 normalized_slope = self._clip01(abs(slope) / dynamic_ideal_slope)
 
-        # 6. 計算 ERS
+        # 6. Calculate ERS
         valid_metrics = [v for v in (rr60, rr90, normalized_slope) if v is not None]
         ers = np.mean(valid_metrics) if valid_metrics else None
         ers_feature_count = len(valid_metrics)
@@ -144,7 +144,7 @@ class ERSToleranceValidator:
 
     def validate_tolerance_effects(self, hr_df: pd.DataFrame, apnea_events: List[pd.Timestamp], 
                                  tolerances: List[int] = [1, 2, 3]) -> pd.DataFrame:
-        """驗證不同容忍度對 ERS 特徵的影響"""
+        """Validate the impact of different tolerances on ERS features"""
         results = []
         
         for i, end_apnea_time in enumerate(apnea_events):
@@ -155,12 +155,12 @@ class ERSToleranceValidator:
                 analysis = self.analyze_event_with_tolerance(hr_df, end_apnea_time, tolerance=tol)
                 
                 if analysis is None:
-                    # 如果分析失敗，記錄 NaN
+                    # If analysis fails, record NaN
                     for key in ["baseline", "peak", "hrr60", "recovery_ratio_60s", 
                                "recovery_ratio_90s", "normalized_slope", "ERS", "ers_feature_count"]:
                         base_result[f"{key}_tol{tol}"] = np.nan
                 else:
-                    # 記錄分析結果
+                    # Record analysis results
                     for key, value in analysis.items():
                         if key != "tolerance":
                             base_result[f"{key}_tol{tol}"] = value
@@ -170,7 +170,7 @@ class ERSToleranceValidator:
         return pd.DataFrame(results)
 
     def generate_summary_report(self, results_df: pd.DataFrame) -> Dict:
-        """生成摘要報告"""
+        """Generate summary report"""
         tolerances = [1, 2, 3]
         total_events = len(results_df)
         
@@ -204,82 +204,82 @@ class ERSToleranceValidator:
 
 
 def load_sample_data(hr_csv_path: str, apnea_csv_path: str) -> tuple:
-    """載入樣本資料 - 基於 features_02.py 的格式"""
+    """Load sample data - based on features_02.py format"""
     
-    # 載入 HR 資料
+    # Load HR data
     hr_df = pd.read_csv(hr_csv_path)
     if 'Time' not in hr_df.columns or 'HR' not in hr_df.columns:
-        raise ValueError("HR 檔案必須包含 'Time' 和 'HR' 欄位")
+        raise ValueError("HR file must contain 'Time' and 'HR' columns")
     hr_df['Time'] = pd.to_datetime(hr_df['Time'])
     
-    # 載入呼吸中止事件資料
+    # Load apnea events data
     apnea_df = pd.read_csv(apnea_csv_path)
     if 'end_apnea' not in apnea_df.columns:
-        raise ValueError("Apnea 檔案必須包含 'end_apnea' 欄位")
+        raise ValueError("Apnea file must contain 'end_apnea' column")
     apnea_df['end_apnea'] = pd.to_datetime(apnea_df['end_apnea'])
     
-    # 提取事件時間點
+    # Extract event timestamps
     apnea_events = apnea_df['end_apnea'].dropna().tolist()
     
     return hr_df, apnea_events
 
 
 def main():
-    """主執行函數"""
-    logging.info("===== ERS 容忍度驗證開始 =====")
+    """Main execution function"""
+    logging.info("===== ERS Tolerance Validation Started =====")
     
-    # 1. 設定檔案路徑 - 請修改為你的實際檔案路徑
-    hr_csv_path = "converted/hr_20250818.csv"  # HR 資料檔案，格式: Time, HR
-    apnea_csv_path = "converted/apnea_events_20250818.csv"  # 呼吸中止事件檔案，格式: end_apnea, row_id
+    # 1. Set file paths - please update with your actual file paths
+    hr_csv_path = "converted/hr_20250818.csv"  # HR data file, format: Time, HR
+    apnea_csv_path = "converted/apnea_events_20250818.csv"  # Apnea events file, format: end_apnea, row_id
     
-    # 或者你可以使用目錄掃描方式（如果你有多天的資料）
-    # converted_dir = Path("converted")  # 包含 hr_*.csv 和 apnea_events_*.csv 的目錄
+    # Alternatively, you can use directory scanning (if you have multiple days of data)
+    # converted_dir = Path("converted")  # Directory containing hr_*.csv and apnea_events_*.csv
     
     try:
         hr_df, apnea_events = load_sample_data(hr_csv_path, apnea_csv_path)
-        logging.info(f"成功載入資料：{len(hr_df)} 筆心率記錄，{len(apnea_events)} 個呼吸中止事件")
+        logging.info(f"Data loaded successfully: {len(hr_df)} HR records, {len(apnea_events)} apnea events")
     except FileNotFoundError as e:
-        logging.error(f"找不到檔案：{e}")
-        logging.info("請確認以下檔案存在：")
-        logging.info(f"  HR 檔案: {hr_csv_path} (欄位: Time, HR)")
-        logging.info(f"  事件檔案: {apnea_csv_path} (欄位: end_apnea, row_id)")
+        logging.error(f"File not found: {e}")
+        logging.info("Please ensure the following files exist:")
+        logging.info(f"  HR file: {hr_csv_path} (columns: Time, HR)")
+        logging.info(f"  Events file: {apnea_csv_path} (columns: end_apnea, row_id)")
         return
     except Exception as e:
-        logging.error(f"載入資料時發生錯誤：{e}")
+        logging.error(f"Error occurred while loading data: {e}")
         return
     
-    # 2. 初始化驗證器
+    # 2. Initialize validator
     validator = ERSToleranceValidator()
     
-    # 3. 執行驗證
-    logging.info("開始分析不同容忍度的影響...")
+    # 3. Run validation
+    logging.info("Analyzing impact of different tolerances...")
     results_df = validator.validate_tolerance_effects(hr_df, apnea_events, tolerances=[1, 2, 3])
     
-    # 4. 生成報告
+    # 4. Generate report
     summary = validator.generate_summary_report(results_df)
     
-    # 5. 顯示結果
+    # 5. Display results
     print("\n" + "="*60)
-    print("ERS 容忍度驗證結果摘要")
+    print("ERS Tolerance Validation Summary")
     print("="*60)
-    print(f"總事件數: {summary['total_events']}")
-    print("\n各容忍度設定的成功率:")
+    print(f"Total events: {summary['total_events']}")
+    print("\nSuccess rates for each tolerance setting:")
     
     for tolerance, stats in summary['tolerance_comparison'].items():
-        print(f"\n{tolerance} 容忍度:")
-        print(f"  ERS 成功率: {stats['ERS_success_rate']}")
-        print(f"  ERS NaN 數量: {stats['ERS_nan_count']}")
-        print(f"  RR60 NaN 數量: {stats['RR60_nan_count']}")
-        print(f"  RR90 NaN 數量: {stats['RR90_nan_count']}")
-        print(f"  標準化斜率 NaN 數量: {stats['NSlope_nan_count']}")
-        print(f"  平均特徵數量: {stats['avg_feature_count']:.2f}")
+        print(f"\n{tolerance} tolerance:")
+        print(f"  ERS success rate: {stats['ERS_success_rate']}")
+        print(f"  ERS NaN count: {stats['ERS_nan_count']}")
+        print(f"  RR60 NaN count: {stats['RR60_nan_count']}")
+        print(f"  RR90 NaN count: {stats['RR90_nan_count']}")
+        print(f"  Normalized slope NaN count: {stats['NSlope_nan_count']}")
+        print(f"  Average feature count: {stats['avg_feature_count']:.2f}")
     
-    # 6. 儲存詳細結果
+    # 6. Save detailed results
     output_path = "ers_tolerance_validation_results.csv"
     results_df.to_csv(output_path, index=False)
-    logging.info(f"詳細結果已儲存至: {output_path}")
+    logging.info(f"Detailed results saved to: {output_path}")
     
-    logging.info("===== 驗證完成 =====")
+    logging.info("===== Validation Completed =====")
 
 
 if __name__ == "__main__":

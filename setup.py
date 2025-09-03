@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='hrr_project',
-    version='0.1.0',
+    version='1.1.1',
     description='A project for analyzing freediving heart rate recovery.',
     author='Su, Yi-Chuan',
     packages=find_packages(),

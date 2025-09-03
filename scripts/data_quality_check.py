@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-數據品質檢查腳本 - 驗證 feature engineering 後的最終數據品質 (邏輯優化版)
+Data Quality Check Script - Validate final data quality after feature engineering (optimized logic version)
 """
 import sys
 import pandas as pd
@@ -11,11 +11,11 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 try:
     from hrr_analysis.config import CRITICAL_FEATURE_COLS, FEATURE_EXPECTED_RANGES
 except ImportError:
-    print("❌ 無法導入 config.py。請確保 hrr_analysis/config.py 存在且路徑正確。")
+    print("❌ Unable to import config.py. Please make sure hrr_analysis/config.py exists and the path is correct.")
     sys.exit(1)
 
 def check_missing_values(df: pd.DataFrame, critical_columns: list[str], threshold_pct: float = 10.0) -> dict:
-    """檢查關鍵欄位的缺失值，並根據閾值決定狀態"""
+    """Check for missing values in critical columns and determine status based on threshold"""
     results = {"status": "PASSED", "messages": []}
     is_fail = False
     is_warn = False
@@ -25,52 +25,51 @@ def check_missing_values(df: pd.DataFrame, critical_columns: list[str], threshol
     for col, count in missing_info.items():
         if count > 0:
             pct = (count / len(df)) * 100
-            msg = f"{col}: {count} 筆缺失 ({pct:.2f}%)"
+            msg = f"{col}: {count} missing ({pct:.2f}%)"
             results["messages"].append(msg)
             
             if pct > threshold_pct:
                 is_fail = True
-            is_warn = True # 只要有缺失就標記為警告
+            is_warn = True # mark as warning if any missing values exist
 
     if is_fail:
         results["status"] = "FAILED"
-        print(f"❌ FAIL: 關鍵欄位缺失率超過 {threshold_pct}%: {results['messages']}")
+        print(f"❌ FAIL: Missing rate in critical columns exceeds {threshold_pct}%: {results['messages']}")
     elif is_warn:
         results["status"] = "WARNING"
-        print(f"⚠️ WARN: 關鍵欄位發現少量缺失值 (模型將使用 Imputer 處理): {results['messages']}")
+        print(f"⚠️ WARN: Minor missing values found in critical columns (model will use Imputer): {results['messages']}")
     else:
-        print("✅ PASS: 所有關鍵欄位無缺失值。")
+        print("✅ PASS: No missing values in critical columns.")
         
     return results
 
-# ... (check_feature_ranges 和 check_data_types 函數保持不變) ...
 def check_feature_ranges(df: pd.DataFrame, expected_ranges: dict[str, tuple]) -> dict:
-    """檢查特徵值範圍是否合理"""
+    """Check if feature value ranges are reasonable"""
     results = {"status": "PASSED", "invalid_ranges": []}
     for col, (min_val, max_val) in expected_ranges.items():
         if col in df.columns and df[col].notna().any():
             actual_min, actual_max = df[col].min(), df[col].max()
             if actual_min < min_val or actual_max > max_val:
-                msg = (f"{col}: 範圍 [{actual_min:.2f}, {actual_max:.2f}] "
-                       f"超出預期 [{min_val}, {max_val}]")
+                msg = (f"{col}: Range [{actual_min:.2f}, {actual_max:.2f}] "
+                       f"exceeds expected [{min_val}, {max_val}]")
                 results["invalid_ranges"].append(msg)
     if results["invalid_ranges"]:
         results["status"] = "WARNING"
-        print(f"⚠️ WARN: 部分特徵值超出預期範圍: {results['invalid_ranges']}")
+        print(f"⚠️ WARN: Some feature values exceed expected ranges: {results['invalid_ranges']}")
     else:
-        print("✅ PASS: 所有特徵值均在預期範圍內。")
+        print("✅ PASS: All feature values are within expected ranges.")
     return results
 
 def check_data_types(df: pd.DataFrame) -> dict:
-    """檢查時間欄位是否為 datetime 格式"""
+    """Check if time column is in datetime format"""
     results = {"status": "PASSED", "message": ""}
     time_col = 'end_apnea_time'
     if time_col in df.columns:
         if pd.api.types.is_datetime64_any_dtype(df[time_col]):
-            print("✅ PASS: 時間欄位 'end_apnea_time' 格式正確。")
+            print("✅ PASS: Time column 'end_apnea_time' has correct datetime format.")
         else:
             results["status"] = "FAILED"
-            results["message"] = f"時間欄位 '{time_col}' 不是 datetime 格式。"
+            results["message"] = f"Time column '{time_col}' is not in datetime format."
             print(f"❌ FAIL: {results['message']}")
     return results
 
@@ -81,21 +80,21 @@ def main():
     
     data_path = Path("features/features_ml.parquet")
     if not data_path.exists():
-        print(f"❌ 找不到數據檔案: {data_path}")
+        print(f"❌ Data file not found: {data_path}")
         sys.exit(1)
     
     df = pd.read_parquet(data_path)
-    print(f"載入數據: {len(df)} 筆, {len(df.columns)} 個欄位 from {data_path}")
+    print(f"Loaded data: {len(df)} rows, {len(df.columns)} columns from {data_path}")
 
     checks = []
     
-    print("\n--- 1. 檢查關鍵欄位缺失值 ---")
+    print("\n--- 1. Check Missing Values in Critical Columns ---")
     checks.append(check_missing_values(df, CRITICAL_FEATURE_COLS))
     
-    print("\n--- 2. 檢查特徵值範圍 ---")
+    print("\n--- 2. Check Feature Value Ranges ---")
     checks.append(check_feature_ranges(df, FEATURE_EXPECTED_RANGES))
     
-    print("\n--- 3. 檢查資料類型 ---")
+    print("\n--- 3. Check Data Types ---")
     checks.append(check_data_types(df))
     
     statuses = [c["status"] for c in checks]

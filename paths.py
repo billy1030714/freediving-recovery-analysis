@@ -36,7 +36,9 @@ DIR_UTILS = PROJECT_ROOT / "utils"
 DIR_NOTEBOOKS = PROJECT_ROOT / "notebooks"
 
 # --- Key input files ---
-FILE_APPLE_HEALTH_XML = DIR_APPLE_HEALTH / "export.xml"
+# determine by env
+xml_filename = os.getenv("XML_FILENAME", "export.xml")
+FILE_APPLE_HEALTH_XML = DIR_APPLE_HEALTH / xml_filename
 
 # --- Helper function for dynamic path generation ---
 def get_daily_path(directory: Path, data_type: str, date_obj: date, extension: str) -> Path:

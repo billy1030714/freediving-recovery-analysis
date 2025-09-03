@@ -112,7 +112,7 @@ def main():
     print(f"{Colors.BOLD}{'='*60}\n{'PROJECT INTEGRATION & HEALTH CHECK':^60}\n{'='*60}{Colors.END}")
     results = {}
     
-    # 修正後的標準賦值與判斷
+    # Corrected standard assignment and validation
     results["Project Structure"] = check_project_structure()
     if not results["Project Structure"]:
         print(f"\n{Colors.RED}❌ Critical file missing. Aborting tests.{Colors.END}")

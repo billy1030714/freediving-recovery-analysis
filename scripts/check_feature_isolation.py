@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-特徵隔離檢查 - 驗證 A軌(short_term) 和 B軌(long_term) 的特徵集符合預期 (邏輯修正版)
+Feature Isolation Check - Verify that the feature sets of Track A (short_term) and Track B (long_term) meet expectations (revised logic)
 """
 import sys
 import json
@@ -12,7 +12,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 from hrr_analysis.config import ERS_COMPONENTS, ALL_POSSIBLE_TARGETS
 
 def run_pipeline_for_track(task_type: str, targets: str) -> bool:
-    """為指定的軌道運行模型訓練，以生成 schema"""
+    """Run model training for the specified track to generate schema"""
     print(f"\n--- Running pipeline for [{task_type}] track ---")
     env = os.environ.copy()
     env["TASK_TYPE"] = task_type
@@ -32,7 +32,7 @@ def run_pipeline_for_track(task_type: str, targets: str) -> bool:
     return True
 
 def get_features_from_schema(target: str) -> set:
-    """從 feature_schema.json 讀取特徵集"""
+    """Read feature set from feature_schema.json"""
     schema_path = Path(f"models/{target}/feature_schema.json")
     if not schema_path.exists():
         raise FileNotFoundError(f"Schema not found for target '{target}' at {schema_path}")
@@ -46,21 +46,20 @@ def main():
     print("=" * 60)
 
     try:
-        # --- 修正後的邏輯 ---
-        # 1. 運行 B 軌 (long_term) 並 *立刻* 讀取其特徵集
+        # 1. Run Track B (long_term) and *immediately* read its feature set
         if not run_pipeline_for_track("long_term", "ERS"): sys.exit(1)
         features_b_track = get_features_from_schema("ERS")
         print(f"[Track B - long_term] captured {len(features_b_track)} features.")
 
-        # 2. 運行 A 軌 (short_term) 並 *立刻* 讀取其特徵集 (這會覆蓋文件，但沒關係)
+        # 2. Run Track A (short_term) and *immediately* read its feature set (this will overwrite files, but that’s okay)
         if not run_pipeline_for_track("short_term", "ERS"): sys.exit(1)
         features_a_track = get_features_from_schema("ERS")
         print(f"[Track A - short_term] captured {len(features_a_track)} features.")
 
-        # 3. 現在，在記憶體中對兩個 *不同* 的特徵集進行比較
+        # 3. Now compare the two *different* feature sets in memory
         print("\n--- Performing Isolation Checks on Captured Features ---")
         
-        # 檢查 1: A 軌是否如預期包含了 ERS 組件？
+        # Check 1: Does Track A include the ERS components as expected?
         if ERS_COMPONENTS.issubset(features_a_track):
             print("✅ PASS: Track A (short_term) correctly includes ERS components.")
         else:
@@ -68,7 +67,7 @@ def main():
             print(f"   Missing: {ERS_COMPONENTS - features_a_track}")
             sys.exit(1)
 
-        # 檢查 2: B 軌是否成功排除了所有恢復期特徵？
+        # Check 2: Does Track B successfully exclude all recovery-related features?
         leakage_features = (ERS_COMPONENTS | ALL_POSSIBLE_TARGETS) & features_b_track
         
         if not leakage_features:

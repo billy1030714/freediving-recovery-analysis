@@ -26,7 +26,7 @@ Quick Start
 
    # Clone repository
    git clone https://github.com/billy1030714/freediving-recovery-analysis.git
-   cd HRR_project
+   cd freediving-recovery-analysis  # GitHub repository name
    
    # Install dependencies
    pip install -r requirements.txt
@@ -34,7 +34,6 @@ Quick Start
    # Run the complete integration test to verify the MLOps architecture
    python scripts/integration_test.py
 
-# ... (Table of Contents 保持不變) ...
 
 Executive Summary
 -----------------
@@ -60,7 +59,6 @@ The project introduces a rigorous **dual-track validation methodology**:
    Confirms the impossibility of true prediction using only pre-dive baseline features,
    [cite_start]establishing clear capability boundaries for consumer wearables. [cite: 139, 298]
 
-# ... (Technical Architecture 保持不變) ...
 
 Learning Curve Insights
 -----------------------
@@ -90,5 +88,3 @@ Learning Curve Insights
      - > 0.88
      - Stable
      - Converged Performance
-
-# ... (Clinical Implications 和 Author Information 保持不變, 建議將 email 換成真實的) ...

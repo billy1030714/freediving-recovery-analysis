@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-模型品質門檻檢查 - 驗證模型是否通過在 04_models.py 中定義的固定品質門檻
+Model Quality Gate Check - Verify whether the model passes the fixed quality gate defined in 04_models.py
 """
 import json
 import sys
@@ -11,7 +11,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 from hrr_analysis.config import QUALITY_GATE_THRESHOLD
 
 def check_gate(target: str) -> None:
-    """檢查指定目標的品質門檻"""
+    """Check the quality gate for the specified target"""
     card_path = Path(f"models/{target}/dataset_card.json")
     
     if not card_path.exists():

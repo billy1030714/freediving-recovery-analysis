@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-回歸基準比較 - 比較當前模型的性能與歷史基準，防止性能衰退
+Regression Baseline Comparison - Compare current model performance against historical baselines to prevent performance degradation
 """
 import json
 import sys
@@ -8,7 +8,7 @@ from pathlib import Path
 import argparse
 
 def load_card(filepath: Path) -> dict:
-    """載入 dataset_card.json 檔案"""
+    """Load dataset_card.json file"""
     if not filepath.exists():
         print(f"⚠️ Baseline file not found: {filepath}. This might be the first run.")
         return None
@@ -29,7 +29,7 @@ def main():
     current_card_path = Path(args.current_card)
     baseline_card_path = Path(args.baseline_card)
 
-    # 載入當前結果
+    # Load current results
     current_card = load_card(current_card_path)
     if not current_card:
         print(f"❌ Current dataset card not found at {current_card_path}!")
@@ -38,7 +38,7 @@ def main():
     current_metrics = current_card.get("evaluation_metrics", {})
     current_r2 = current_metrics.get("r2")
 
-    # 載入基準結果
+    # Load baseline results
     baseline_card = load_card(baseline_card_path)
     if not baseline_card:
         print("✅ No baseline found. Setting current results as the first baseline.")
@@ -50,7 +50,7 @@ def main():
     baseline_metrics = baseline_card.get("evaluation_metrics", {})
     baseline_r2 = baseline_metrics.get("r2")
 
-    # 比較
+    # Compare
     if current_r2 is None or baseline_r2 is None:
         print("❌ Could not find 'r2' score in one of the dataset cards.")
         sys.exit(1)
@@ -60,7 +60,7 @@ def main():
 
     degradation = baseline_r2 - current_r2
     
-    # B 軌特別處理：我們期望 R² 保持在低位
+    # Special handling for Track B: we expect R² to stay low
     task_type = current_card.get("task_type", "unknown")
     if task_type == "long_term":
         if current_r2 > 0.05:
@@ -70,13 +70,13 @@ def main():
             print("✅ PASS: Track B (long_term) R² score remains near zero as expected.")
             sys.exit(0)
 
-    # A 軌處理
+    # Track A handling
     if degradation > (abs(baseline_r2) * args.tolerance):
         print(f"❌ FAIL: Performance degraded by {degradation:.4f} ({degradation/abs(baseline_r2):.2%}), which is over the {args.tolerance:.0%} tolerance.")
         sys.exit(1)
     else:
         print(f"✅ PASS: Performance is stable or has improved.")
-        # 如果性能更好，可以選擇更新基準線 (在 CI/CD yml 中實現)
+        # If performance improved, you may choose to update the baseline (implemented in CI/CD yml)
         sys.exit(0)
 
 if __name__ == "__main__":

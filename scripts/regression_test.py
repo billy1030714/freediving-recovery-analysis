@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-回歸測試 - 運行完整 pipeline 並比對關鍵指標與黃金標準是否一致
+Regression Test - Run the full pipeline and compare key metrics against the golden standard
 """
 import sys
 import json
@@ -9,7 +9,6 @@ import subprocess
 import argparse
 import os
 
-# 黃金標準 (Golden Master)
 GOLDEN_METRICS = {
     "ERS": {
         "short_term": { "r2": 0.9175 },
@@ -19,7 +18,7 @@ GOLDEN_METRICS = {
 TOLERANCE = 1e-4
 
 def run_full_pipeline(task_type: str, target: str, skip_cleaning: bool = False) -> None:
-    """以子程序方式運行完整的分析 pipeline"""
+    """Run the full analysis pipeline as subprocesses"""
     print(f"\n--- Running full pipeline for track: {task_type}, target: {target} ---")
     env = os.environ.copy()
     env["TASK_TYPE"] = task_type
@@ -47,7 +46,7 @@ def run_full_pipeline(task_type: str, target: str, skip_cleaning: bool = False) 
             raise RuntimeError(f"Pipeline execution failed at {script}")
 
 def validate_output(task_type: str, target: str) -> None:
-    """驗證 pipeline 產出是否與黃金標準一致"""
+    """Validate whether pipeline output matches the golden standard"""
     print(f"--- Validating output for track: {task_type}, target: {target} ---")
     card_path = Path(f"models/{target}/dataset_card.json")
     if not card_path.exists(): raise FileNotFoundError(f"Output file not found: {card_path}")
@@ -78,9 +77,9 @@ def main():
     print("=" * 60)
 
     try:
-        # 由於 integration_test 已經分離了 B 軌和 A 軌的測試，
-        # 這個腳本主要用於本地開發的完整性檢查。
-        # CI/CD 中，check_feature_isolation.py 已經驗證了雙軌邏輯。
+        # Since integration_test has already separated Track B and Track A testing,
+        # this script is mainly used for local development integrity checks.
+        # In CI/CD, check_feature_isolation.py has already validated the dual-track logic.
         run_full_pipeline(task_type="long_term", target="ERS", skip_cleaning=args.skip_cleaning)
         run_full_pipeline(task_type="short_term", target="ERS", skip_cleaning=args.skip_cleaning)
         
