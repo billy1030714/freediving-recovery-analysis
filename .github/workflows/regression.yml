@@ -16,6 +16,7 @@ jobs:
       CI: "true"
       TASK_TYPE: "long_term"
       TARGETS: "ERS,rmssd_post,hrr60"
+      STUDIO_TOKEN: ${{ secrets.DVC_STUDIO_TOKEN }}
 
     steps:
       - name: 🚚 Checkout Repository
