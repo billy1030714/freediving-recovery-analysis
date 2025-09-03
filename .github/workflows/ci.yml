@@ -32,3 +32,7 @@ jobs:
 
     - name: 🧪 Run Unit Tests
       run: poetry run pytest
+
+    - name: Validate DVC pipeline
+      run: |
+        poetry run dvc dag
