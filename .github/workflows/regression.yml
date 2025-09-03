@@ -32,6 +32,6 @@ jobs:
         run: |
           export TASK_TYPE="short_term"
           export TARGETS="ERS"
-          poetry run python hrr_analysis/04_models.py
+          PYTHONPATH=${{ github.workspace }} poetry run python hrr_analysis/04_models.py
         env:
           CI: "true"
