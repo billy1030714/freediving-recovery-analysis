@@ -37,9 +37,7 @@ jobs:
     
     - name: Lint with flake8
       run: |
-        # Stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     
     - name: Run Unit Tests
@@ -76,6 +74,9 @@ jobs:
         mkdir -p apple_health_export
         cp tests/data/sample_export.xml apple_health_export/sample_export.xml
     
+    - name: Prepare features dir
+      run: mkdir -p features
+    
     - name: Generate Features for Quality Check
       env:
         XML_FILENAME: "sample_export.xml"
@@ -85,6 +86,8 @@ jobs:
         python hrr_analysis/02_features.py
         
     - name: Check Data Quality
+      env:
+        PYTHONPATH: .
       run: |
         python scripts/data_quality_check.py
 
@@ -105,19 +108,20 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     
-    # This script will execute the entire pipeline and compare with golden standard
     - name: Prepare test data for regression
       run: |
         mkdir -p apple_health_export
         cp tests/data/sample_export.xml apple_health_export/sample_export.xml
     
+    - name: Prepare features dir
+      run: mkdir -p features
+    
     - name: Run Regression Tests
       env:
         XML_FILENAME: "sample_export.xml"
+        PYTHONPATH: .
       run: |
         python scripts/regression_test.py --skip-cleaning
-        
-    # If still needed, the script must be rewritten to parse dataset_card.json
 
   build-docs:
     runs-on: ubuntu-latest
