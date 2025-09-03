@@ -9,9 +9,9 @@ jobs:
   run-pipeline:
     runs-on: ubuntu-latest
     env:
-      CI: "true" # 啟用 CI 模式，跳過互動輸入
-      TASK_TYPE: "long_term" # 設定為研究軌道
-      TARGETS: "ERS,rmssd_post,hrr60" # 要訓練的目標
+      CI: "true"
+      TASK_TYPE: "long_term"
+      TARGETS: "ERS,rmssd_post,hrr60"
 
     steps:
       - name: 🚚 Checkout Repository
@@ -27,10 +27,18 @@ jobs:
       - name: ⚙️ Install Dependencies
         run: poetry install --no-root
 
-      - name: 🔑 Authenticate to Google Cloud
-        uses: 'google-github-actions/auth@v2'
-        with:
-          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+      # --- START OF MODIFICATION ---
+      # We are replacing the old 'google-github-actions/auth' step
+      # with a more explicit, manual authentication method for DVC.
+      - name: 🔑 Setup GCS Credentials for DVC
+        run: |
+          # 1. Write the content of the secret to a temporary file.
+          echo "${{ secrets.GCP_SA_KEY }}" > gcp-credentials.json
+          
+          # 2. Force DVC to use this specific credential file.
+          # We use $(pwd) to ensure an absolute path.
+          poetry run dvc remote modify gcs credentialpath "$(pwd)/gcp-credentials.json"
+      # --- END OF MODIFICATION ---
 
       - name: 📥 Pull Data from DVC (GCS)
         run: poetry run dvc pull --force
