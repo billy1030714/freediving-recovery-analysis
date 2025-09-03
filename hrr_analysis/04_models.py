@@ -239,6 +239,15 @@ class ModelTrainer:
 
     def _save_artifacts(self, best_model_info, leaderboard, feature_columns, dataset_metadata, data_path):
         """Saves all model artifacts, including the model file, metadata, and the new target distribution file."""
+        def _json_safe(obj):
+            if isinstance(obj, (np.bool_, np.bool8)):
+                return bool(obj)
+            if isinstance(obj, (np.integer,)):
+                return int(obj)
+            if isinstance(obj, (np.floating,)):
+                return float(obj)
+            return obj
+
         # Save model, leaderboard, and schemas
         best_model_path = self.output_dir / "best_model.joblib"
         joblib.dump(best_model_info["pipeline"], best_model_path)
@@ -249,7 +258,7 @@ class ModelTrainer:
         
         # Save leaderboard
         with open(self.output_dir / "leaderboard.json", "w", encoding="utf-8") as f: 
-            json.dump(leaderboard, f, indent=2, ensure_ascii=False)
+            json.dump(leaderboard, f, indent=2, ensure_ascii=False, default=_json_safe)
         
         # Save feature schema
         feature_schema = {
@@ -260,7 +269,7 @@ class ModelTrainer:
             "target": self.target
         }
         with open(self.output_dir / "feature_schema.json", "w", encoding="utf-8") as f: 
-            json.dump(feature_schema, f, indent=2, ensure_ascii=False)
+            json.dump(feature_schema, f, indent=2, ensure_ascii=False, default=_json_safe)
         
         # Quality gate check
         quality_threshold = 0.05
@@ -284,7 +293,7 @@ class ModelTrainer:
             }
         }
         with open(self.output_dir / "dataset_card.json", "w", encoding="utf-8") as f: 
-            json.dump(dataset_card, f, indent=2, ensure_ascii=False)
+            json.dump(dataset_card, f, indent=2, ensure_ascii=False, default=_json_safe)
 
         # Save the target distribution of the real training data
         dist_path = self.output_dir / "target_distribution.json"
@@ -301,7 +310,7 @@ class ModelTrainer:
             }
         }
         with open(dist_path, "w", encoding="utf-8") as f:
-            json.dump(dist_data, f, indent=2, ensure_ascii=False)
+            json.dump(dist_data, f, indent=2, ensure_ascii=False, default=_json_safe)
         
         logging.info(f"Target distribution of real training data saved to: {dist_path}")
         logging.info(f"All artifacts have been successfully saved to: {self.output_dir}")

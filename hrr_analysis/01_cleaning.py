@@ -46,7 +46,7 @@ def parse_hr_from_xml(xml_path: Path, today_date: datetime.date, hr_min: int, hr
     df = df.dropna(subset=["Time"]).sort_values("Time").reset_index(drop=True)
     
     # Filter out heart rates outside the valid range
-    df = df[(df["HR"] >= HR_MIN) & (df["HR"] <= HR_MAX)]
+    df = df[(df["HR"] >= hr_min) & (df["HR"] <= hr_max)]
     
     # Impute missing values if any exist
     if df["HR"].isna().any():

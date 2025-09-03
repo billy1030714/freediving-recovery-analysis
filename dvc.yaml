@@ -1,0 +1,49 @@
+stages:
+  train:
+    cmd: python hrr_analysis/04_models.py
+    deps:
+      - hrr_analysis/04_models.py
+      - features/features_ml.parquet
+      - params.yaml
+    outs:
+      - models/
+    params:
+      - training
+      - models
+
+  explain:
+    cmd: python hrr_analysis/05_explainability.py
+    deps:
+      - hrr_analysis/05_explainability.py
+      - models/
+      - features/features_ml.parquet
+    outs:
+      - explainability/
+    always_changed: true
+
+  predict:
+    cmd: python hrr_analysis/06_predict.py --fast
+    deps:
+      - hrr_analysis/06_predict.py
+      - models/
+      - features/features_ml.parquet
+    outs:
+      - predictions/
+
+  visualize:
+    cmd: python hrr_analysis/07_visualize.py
+    deps:
+      - hrr_analysis/07_visualize.py
+      - predictions/
+      - models/
+    outs:
+      - report/figures/
+
+  report:
+    cmd: python hrr_analysis/08_report.py
+    deps:
+      - hrr_analysis/08_report.py
+      - models/
+      - report/figures/
+    outs:
+      - report/final_report.md

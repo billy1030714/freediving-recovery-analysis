@@ -15,7 +15,11 @@ import matplotlib.pyplot as plt
 import joblib, numpy as np, pandas as pd, shap
 from lime.lime_tabular import LimeTabularExplainer
 # --- [FIX] Import the new RMSE function ---
-from sklearn.metrics import r2_score, mean_absolute_error, root_mean_squared_error
+from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
+
+def root_mean_squared_error(y_true, y_pred):
+    return mean_squared_error(y_true, y_pred, squared=False)
+
 from scipy.stats import percentileofscore
 
 # --- Local Modules ---

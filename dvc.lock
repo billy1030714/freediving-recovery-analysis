@@ -1,0 +1,179 @@
+schema: '2.0'
+stages:
+  clean:
+    cmd: python hrr_analysis/01_cleaning.py
+    deps:
+    - path: apple_health_export/export.xml
+      hash: md5
+      md5: 5b8cd4317a29322dd2b755de7fefa033
+      size: 648003184
+    - path: hrr_analysis/01_cleaning.py
+      hash: md5
+      md5: e398b0b72b79a25e36b3ca7948d6b863
+      size: 6660
+    - path: params.yaml
+      hash: md5
+      md5: 2affea7160b29edee413119bf87933d0
+      size: 707
+    outs:
+    - path: converted/
+      hash: md5
+      md5: 26a4d701237fc525c2e2730b51af6e7b.dir
+      size: 5852270
+      nfiles: 2
+  features:
+    cmd: python hrr_analysis/02_features.py
+    deps:
+    - path: converted/
+      hash: md5
+      md5: d751713988987e9331980363e24189ce.dir
+      size: 0
+      nfiles: 0
+    - path: hrr_analysis/02_features.py
+      hash: md5
+      md5: 8946e45b9c27d7c8da6c2b1434b5bb7a
+      size: 10596
+    - path: params.yaml
+      hash: md5
+      md5: 2affea7160b29edee413119bf87933d0
+      size: 707
+    outs:
+    - path: features/
+      hash: md5
+      md5: 2382fd64c6bcd5db1c4a361c5f878e35.dir
+      size: 0
+      nfiles: 2
+  train:
+    cmd: python hrr_analysis/04_models.py
+    deps:
+    - path: features/features_ml.parquet
+      hash: md5
+      md5: d081ae3feaad7fa275e173d663ee2256
+      size: 26386
+    - path: hrr_analysis/04_models.py
+      hash: md5
+      md5: 2fd5e475bafe63ccac09449ce09946d2
+      size: 17662
+    - path: params.yaml
+      hash: md5
+      md5: 2affea7160b29edee413119bf87933d0
+      size: 707
+    params:
+      params.yaml:
+        models:
+          xgb:
+            n_estimators: 600
+            max_depth: 4
+            learning_rate: 0.05
+            subsample: 0.9
+            colsample_bytree: 0.9
+            reg_lambda: 1.0
+            reg_alpha: 0.0
+            n_jobs: -1
+            tree_method: hist
+          rf:
+            n_estimators: 600
+            max_depth:
+            min_samples_leaf: 2
+            n_jobs: -1
+          ridge:
+            alpha: 1.0
+        training:
+          random_seed: 42
+          split_ratio: 0.7
+          quality_gate_threshold: 0.05
+    outs:
+    - path: models/
+      hash: md5
+      md5: 2fdf93b82dc3bfe1915b3e8035052c74.dir
+      size: 4307103
+      nfiles: 11
+  explain:
+    cmd: python hrr_analysis/05_explainability.py
+    deps:
+    - path: features/features_ml.parquet
+      hash: md5
+      md5: d081ae3feaad7fa275e173d663ee2256
+      size: 26386
+    - path: hrr_analysis/05_explainability.py
+      hash: md5
+      md5: aff2d93b24245ef4445fe883b30ca04f
+      size: 10619
+    - path: models/
+      hash: md5
+      md5: 2fdf93b82dc3bfe1915b3e8035052c74.dir
+      size: 4307103
+      nfiles: 11
+    outs:
+    - path: explainability/
+      hash: md5
+      md5: 4dc9abb16c379af0fd60fc403f79878e.dir
+      size: 565491
+      nfiles: 10
+  predict:
+    cmd: python hrr_analysis/06_predict.py --fast
+    deps:
+    - path: features/features_ml.parquet
+      hash: md5
+      md5: d081ae3feaad7fa275e173d663ee2256
+      size: 26386
+    - path: hrr_analysis/06_predict.py
+      hash: md5
+      md5: a655ce4478d9b9825f57d82ef0c4c55d
+      size: 11962
+    - path: models/
+      hash: md5
+      md5: 2fdf93b82dc3bfe1915b3e8035052c74.dir
+      size: 4307103
+      nfiles: 11
+    outs:
+    - path: predictions/
+      hash: md5
+      md5: 46ce296b8b241b6ef45da4b2dc85b1fb.dir
+      size: 36312
+      nfiles: 6
+  visualize:
+    cmd: python hrr_analysis/07_visualize.py
+    deps:
+    - path: hrr_analysis/07_visualize.py
+      hash: md5
+      md5: 4c2f2176484a0903c50553b334013ed1
+      size: 19395
+    - path: models/
+      hash: md5
+      md5: 2fdf93b82dc3bfe1915b3e8035052c74.dir
+      size: 4307103
+      nfiles: 11
+    - path: predictions/
+      hash: md5
+      md5: 46ce296b8b241b6ef45da4b2dc85b1fb.dir
+      size: 36312
+      nfiles: 6
+    outs:
+    - path: report/figures/
+      hash: md5
+      md5: 5bbb05dbbd88ac82051f751ba64d7984.dir
+      size: 1291191
+      nfiles: 9
+  report:
+    cmd: python hrr_analysis/08_report.py
+    deps:
+    - path: hrr_analysis/08_report.py
+      hash: md5
+      md5: 148473e9ed0171a1c4cbb816a75497ed
+      size: 15370
+    - path: models/
+      hash: md5
+      md5: 2fdf93b82dc3bfe1915b3e8035052c74.dir
+      size: 4307103
+      nfiles: 11
+    - path: report/figures/
+      hash: md5
+      md5: 5bbb05dbbd88ac82051f751ba64d7984.dir
+      size: 1291191
+      nfiles: 9
+    outs:
+    - path: report/final_report.md
+      hash: md5
+      md5: d44420c6f38fd6a9f793531f6e762279
+      size: 5628
