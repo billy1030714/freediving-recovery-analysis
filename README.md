@@ -1,7 +1,7 @@
 # Personalized Freediving Recovery Assessment
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF.svg)](https://github.com/billy1030714/freediving-recovery-analysis/actions)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![CI Validation](https://github.com/billy1030714/freediving-recovery-analysis/actions/workflows/main.yml/badge.svg)](https://github.com/billy1030714/freediving-recovery-analysis/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A machine learning pipeline for analyzing freediving recovery patterns using Apple Watch data, implementing a novel **dual-track validation strategy** that separates algorithm validation from predictive assessment.
@@ -12,7 +12,7 @@ This project establishes a rigorous validation framework for consumer wearable h
 
 ## 🔬 Key Innovation: Dual-Track Validation
 
-The project's core innovation is a dual-track methodology that systematically separates algorithm validation from scientific predictability testing, providing both practical insights and fundamental scientific boundaries.
+The project's core innovation is a dual-track methodology that systematically separates algorithm validation from scientific predictability testing.
 
 ### Complete Dual-Track Comparison
 
@@ -24,32 +24,32 @@ The project's core innovation is a dual-track methodology that systematically se
 This dramatic contrast proves that:
 1. **ERS algorithm design is scientifically sound** (Product Track validates the components)
 2. **Prediction boundaries are clearly defined** (Research Track shows limits without components)
-3. **The dual-track strategy successfully separates algorithm design from predictive assessment**
+3. The dual-track strategy successfully separates algorithm design from predictive assessment
 
 ## 📊 Complete Results Summary
 
 ### Product Track Results (short_term mode)
-Validates the Early Recovery Score (ERS) as a descriptive tool by including ERS components as features.
+Validates the Early Recovery Score (ERS) as a descriptive tool. This is the core logic validated by our automated CI pipeline.
 
-| Model          |  R² Score  | MAE    | RMSE   |
-| -------------- | :--------: | ------ | ------ |
-| **XGBoost (Best)** | **0.9175** | 0.0341 | 0.0472 |
-| Random Forest  |   0.8204   | 0.0514 | 0.0697 |
-| Ridge          |   0.7226   | 0.0570 | 0.0867 |
+| Model | R² Score | MAE | RMSE |
+|-------|:--------:|:---:|:----:|
+| **XGBoost (Best)** | **0.9175** | **0.0341** | **0.0472** |
+| Random Forest | 0.8204 | 0.0514 | 0.0697 |
+| Ridge | 0.7226 | 0.0570 | 0.0867 |
 
 ### Research Track Results (long_term mode)
-Tests true predictability using only pre-dive features under strict leak-free conditions.
+Tests true predictability using only pre-dive features. These results define the scientific boundaries of the wearable device.
 
-| Target Metric  | Best Model    | Best R² Score | Predictability |
-| -------------- | ------------- | :-----------: | -------------- |
-| **mean_rr_post** | Ridge       | **0.3114**    | ✅ Limited but meaningful |
-| **pnn50_post**   | Ridge       | **0.0371**    | ⚠️ Minimal |
-| **hrr60**        | Random Forest | **-0.0380**   | ❌ Not predictable |
-| **sdnn_post**    | Ridge       | **-0.0732**   | ❌ Not predictable |
-| **ERS**          | Random Forest | **-0.1015**   | ❌ Not predictable |
-| **rmssd_post**   | Ridge       | **-0.1138**   | ❌ Not predictable |
+| Target Metric | Best Model | Best R² Score | Predictability |
+|---------------|------------|:-------------:|----------------|
+| **mean_rr_post** | Ridge | **0.3114** | ✅ Limited but meaningful |
+| **pnn50_post** | Ridge | **0.0371** | ⚠️ Minimal |
+| **hrr60** | Random Forest | **-0.0380** | ❌ Not predictable |
+| **sdnn_post** | Ridge | **-0.0732** | ❌ Not predictable |
+| **ERS** | Random Forest | **-0.1015** | ❌ Not predictable |
+| **rmssd_post** | Ridge | **-0.1138** | ❌ Not predictable |
 
-## 🚀 Quick Start (MLOps Workflow)
+## 🚀 Quick Start
 
 ### Prerequisites
 ```bash
@@ -57,116 +57,97 @@ Tests true predictability using only pre-dive features under strict leak-free co
 curl -sSL https://install.python-poetry.org | python3 -
 
 # Clone and setup
-git clone <repository-url>
-cd HRR_project
+git clone https://github.com/billy1030714/freediving-recovery-analysis.git
+cd freediving-recovery-analysis
 poetry install
 ```
 
-### Complete Pipeline Execution
+### Pipeline Execution
 
-#### Option 1: DVC Pipeline (Recommended)
+For full-scale experiments with large datasets, DVC is used locally to manage the pipeline.
+
 ```bash
-# Run full automated pipeline
+# Run the full automated pipeline for all stages
 poetry run dvc repro
 ```
 
-#### Option 2: Manual Execution
+To run specific tracks manually:
+
 ```bash
-# Product Track (recommended first run: validates ERS algorithm design)
+# Product Track (validates ERS algorithm design - Core Validation)
 export TASK_TYPE=short_term
 export TARGETS=ERS
+poetry run python hrr_analysis/02_features.py
 poetry run python hrr_analysis/04_models.py
-poetry run python hrr_analysis/05_explainability.py
 poetry run python hrr_analysis/08_report.py
 
-# Research Track (advanced: strict predictability assessment)
+# Research Track (strict predictability assessment)
 export TASK_TYPE=long_term
 export TARGETS="ERS,rmssd_post"
-poetry run python hrr_analysis/04_models.py
-poetry run python hrr_analysis/05_explainability.py
-poetry run python hrr_analysis/06_predict.py --fast
-poetry run python hrr_analysis/07_visualize.py
-poetry run python hrr_analysis/08_report.py
+poetry run dvc repro
 ```
 
-## 📈 Pipeline Stages
+## 🏗️ Architecture & Pipeline
 
-| Stage | Script | Purpose | Key Outputs |
-|-------|--------|---------|-------------|
-| **Clean** | `01_cleaning.py` | Raw data processing | Heart rate data, apnea events |
-| **Features** | `02_features.py` | Feature engineering | ML-ready feature datasets |
-| **Train** | `04_models.py` | Model training & evaluation | Trained models, performance metrics |
-| **Explain** | `05_explainability.py` | Model interpretation | SHAP plots, feature importance |
-| **Predict** | `06_predict.py` | Generate predictions | Predictions, percentile rankings |
-| **Visualize** | `07_visualize.py` | Create visualizations | Performance plots, recovery curves |
-| **Report** | `08_report.py` | Generate final report | Comprehensive markdown report |
+The project follows a modular pipeline structure managed by `dvc.yaml`.
 
-## 🏗️ Architecture
+| Stage | Script | Purpose |
+|-------|--------|---------|
+| **Clean** | `01_cleaning.py` | Raw data processing |
+| **Features** | `02_features.py` | Feature engineering |
+| **Train** | `04_models.py` | Model training & evaluation |
+| **Explain** | `05_explainability.py` | Model interpretation |
+| **Predict** | `06_predict.py` | Prediction generation |
+| **Visualize** | `07_visualize.py` | Visualization creation |
+| **Report** | `08_report.py` | Final report generation |
 
 ```
-HRR_project/
-├── hrr_analysis/           # Core pipeline scripts (01-08)
-│   ├── 01_cleaning.py     # Data cleaning and preprocessing
-│   ├── 02_features.py     # Feature engineering pipeline
-│   ├── 04_models.py       # Model training and evaluation
-│   ├── 05_explainability.py  # Model interpretation
-│   ├── 06_predict.py      # Prediction generation
-│   ├── 07_visualize.py    # Visualization creation
-│   └── 08_report.py       # Final report generation
-├── utils/                  # Shared utilities and data loaders
-├── apple_health_export/    # Raw Apple Health data (gitignored)
-├── converted/             # Processed heart rate and apnea data (gitignored)
-├── features/              # Feature engineering outputs (gitignored)
-├── models/                # Trained models and metadata (gitignored)
-├── explainability/        # Model interpretation results (gitignored)
-├── predictions/           # Prediction outputs and metrics (gitignored)
-├── report/                # Final visualizations and reports (gitignored)
-├── dvc.yaml              # DVC pipeline configuration
-├── params.yaml           # Centralized parameters
-└── paths.py              # Path configuration
+freediving-recovery-analysis/
+├── hrr_analysis/           # Core pipeline scripts
+├── converted/              # Processed data (gitignored)
+├── features/               # Feature outputs (gitignored)
+├── models/                 # Trained models (gitignored)
+├── explainability/         # Model interpretation results (gitignored)
+├── predictions/            # Prediction outputs (gitignored)
+├── report/                 # Final reports (gitignored)
+├── scripts/                # Validation and testing scripts
+├── dvc.yaml                # DVC pipeline configuration
+├── params.yaml             # Centralized parameters
+└── paths.py                # Path configuration and project root detection
 ```
 
-## 🔧 Configuration
+## 🔧 Technical Stack
 
-### Key Parameters (`params.yaml`)
+**ML Framework:** XGBoost, scikit-learn, Random Forest, Ridge Regression
 
-```yaml
-# Data Processing
-data_cleaning:
-  hr_min: 30
-  hr_max: 200
+**MLOps & Automation:**
+- **Poetry**: Dependency management & reproducible environments
+- **DVC**: Pipeline version control (for local experiments)
+- **GitHub Actions**: Continuous integration for core algorithm validation
+- **MLflow**: Experiment tracking & model logging
 
-# Feature Engineering  
-feature_engineering:
-  base_window: [330, 150]
-  peak_max_seconds: 120
-  hrv_window: [180, 360]
+**Configuration Architecture:**
+- **paths.py**: Centralized path management and project root detection
+- **params.yaml**: Model hyperparameters and pipeline configuration
+- **Direct constants**: Critical validation constants embedded in scripts for simplicity
 
-# Model Training
-training:
-  random_seed: 42
-  split_ratio: 0.7
-  quality_gate_threshold: 0.05
-```
+**Explainability:** SHAP, LIME, Permutation Importance
 
-### Environment Variables
+**Data Processing:** Pandas, NumPy, feature engineering pipelines
 
-- `TASK_TYPE`: `long_term` (research) or `short_term` (product)
-- `TARGETS`: Comma-separated list of target variables
-- `CI`: Automatically detected for CI/CD environments
+**Validation:** Time-series splits, strict data leakage prevention
 
-## 📁 Key Outputs
+## 🧪 Validation Strategy
 
-### Models Directory (`models/`)
-- `best_model.joblib`: Trained model pipeline
-- `dataset_card.json`: Complete model metadata with dual-track information
-- `feature_schema.json`: Feature specifications
-- `target_distribution.json`: Training data distribution for percentile calculations
-- `leaderboard.json`: Model comparison results
+### Time-Series Data Split
+- **Training**: First 70% of data (chronologically)
+- **Validation**: Last 30% of data (chronologically)
+- **Rationale**: Prevents future information leakage
 
-### Reports Directory (`report/`)
-- `final_report.md`: Comprehensive dual-track analysis report
-- `figures/`: Performance visualizations and model plots organized by target
+### Dual-Track Feature Exclusion
+- **Research Track**: Strict exclusion of all post-dive features and ERS components
+- **Product Track**: Inclusion of ERS components for algorithm validation
+- **CI Validation**: Automated testing of Product Track core logic
 
 ## 🔍 Scientific Insights
 
@@ -179,38 +160,6 @@ The research successfully quantified the limits of pre-dive feature-based predic
 ### Algorithm Validation
 SHAP analysis in the Product Track confirms that `recovery_ratio_60s`, `recovery_ratio_90s`, and `normalized_slope` are the most important ERS components, scientifically validating the algorithm design.
 
-## 🧪 Validation Strategy
-
-### Time-Series Data Split
-- **Training**: First 70% of data (chronologically)
-- **Validation**: Last 30% of data (chronologically)
-- **Rationale**: Prevents future information leakage
-
-### Dual-Track Feature Exclusion
-- **Research Track**: Strict exclusion of all post-dive features and ERS components
-- **Product Track**: Inclusion of ERS components for algorithm validation
-- **Logging**: Comprehensive logging of excluded columns for transparency
-
-## 🚀 CI/CD Integration
-
-### DVC Pipeline Benefits
-- **Reproducibility**: Version-controlled pipeline and experiments
-- **Automation**: One-command full pipeline execution (`dvc repro`)
-- **Dependency Tracking**: Automatic stage dependency resolution
-- **CI Integration**: Automated pipeline validation in GitHub Actions
-
-### Pipeline Dependencies
-```yaml
-stages:
-  train:
-    deps:
-      - hrr_analysis/04_models.py
-      - features/features_ml.parquet
-      - params.yaml
-    outs:
-      - models/
-```
-
 ## 🏥 Clinical Relevance
 
 ### Immediate Applications
@@ -222,22 +171,6 @@ stages:
 - OSA (Obstructive Sleep Apnea) severity assessment
 - COPD exacerbation prediction using similar physiological patterns
 - Personalized cardiovascular risk stratification
-
-## 🔧 Technical Stack
-
-**ML Framework:** XGBoost, scikit-learn, Random Forest, Ridge Regression
-
-**MLOps & Automation:**
-- **Poetry**: Dependency management & reproducible environments
-- **DVC**: Data & pipeline version control
-- **MLflow**: Experiment tracking & model logging
-- **GitHub Actions**: Continuous integration & automated pipeline execution
-
-**Explainability:** SHAP, LIME, Permutation Importance
-
-**Data Processing:** Pandas, NumPy, feature engineering pipelines
-
-**Validation:** Time-series splits, strict data leakage prevention
 
 ## 👤 Author
 

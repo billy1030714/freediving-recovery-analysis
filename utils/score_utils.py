@@ -30,8 +30,8 @@ def compute_ers(
     val_ns = 0.0 if pd.isna(norm_slope) else float(norm_slope)
 
     # Step 2: Convert slope into a contribution within the 0–1 range
-    # We define an ideal recovery slope benchmark as -0.8. The larger the absolute value of the slope,
-    # the higher the contribution, capped at 1.0.
+    # Uses -0.8 bpm/second as physiological benchmark for ideal recovery slope
+    # Formula: min(1.0, |slope| / 0.8) ensures contribution ∈ [0,1]
     slope_contribution = min(1.0, abs(val_ns) / 0.8)
 
     # Step 3: Compute the ERS score using weighted averaging

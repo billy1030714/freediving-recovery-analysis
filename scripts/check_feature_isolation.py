@@ -8,8 +8,11 @@ from pathlib import Path
 import os
 import subprocess
 
+# Direct constants (no config.py dependency)
+ERS_COMPONENTS = {"recovery_ratio_60s", "recovery_ratio_90s", "normalized_slope"}
+ALL_POSSIBLE_TARGETS = {"ERS", "rmssd_post", "sdnn_post", "pnn50_post", "mean_rr_post", "hrr60"}
+
 sys.path.append(str(Path(__file__).resolve().parent.parent))
-from hrr_analysis.config import ERS_COMPONENTS, ALL_POSSIBLE_TARGETS
 
 def run_pipeline_for_track(task_type: str, targets: str) -> bool:
     """Run model training for the specified track to generate schema"""
@@ -48,10 +51,13 @@ def main():
     try:
         # 1. Run Track B (long_term) and *immediately* read its feature set
         if not run_pipeline_for_track("long_term", "ERS"): sys.exit(1)
+        # MEMORY-BASED COMPARISON: Capture feature sets immediately after each run
+        # to avoid file overwrite issues during dual-track validation
         features_b_track = get_features_from_schema("ERS")
         print(f"[Track B - long_term] captured {len(features_b_track)} features.")
 
-        # 2. Run Track A (short_term) and *immediately* read its feature set (this will overwrite files, but that’s okay)
+        # 2. Run Track A (short_term) and *immediately* read its feature set
+        # Track A will overwrite the same files, but we've already captured Track B in memory
         if not run_pipeline_for_track("short_term", "ERS"): sys.exit(1)
         features_a_track = get_features_from_schema("ERS")
         print(f"[Track A - short_term] captured {len(features_a_track)} features.")

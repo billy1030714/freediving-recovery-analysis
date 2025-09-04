@@ -7,15 +7,24 @@ import pandas as pd
 from pathlib import Path
 import json
 
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-try:
-    from hrr_analysis.config import CRITICAL_FEATURE_COLS, FEATURE_EXPECTED_RANGES
-except ImportError:
-    print("❌ Unable to import config.py. Please make sure hrr_analysis/config.py exists and the path is correct.")
-    sys.exit(1)
+# Direct constants (no config.py dependency)
+CRITICAL_FEATURE_COLS = ["HRbaseline", "HRpeak", "ERS"]
+FEATURE_EXPECTED_RANGES = {
+    "HRbaseline": (30, 200),
+    "HRpeak": (50, 220),
+    "ERS": (0.0, 1.0)
+}
 
 def check_missing_values(df: pd.DataFrame, critical_columns: list[str], threshold_pct: float = 10.0) -> dict:
-    """Check for missing values in critical columns and determine status based on threshold"""
+   """
+    TIERED MISSING VALUE ASSESSMENT:
+    
+    - FAIL: >10% missing in critical columns (pipeline cannot proceed)
+    - WARN: Any missing values (imputer will handle, but worth noting)  
+    - PASS: No missing values in critical columns
+    
+    This approach balances data quality with practical ML pipeline robustness.
+    """
     results = {"status": "PASSED", "messages": []}
     is_fail = False
     is_warn = False

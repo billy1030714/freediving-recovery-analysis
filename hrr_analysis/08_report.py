@@ -165,7 +165,19 @@ class ReportGenerator:
         self.context = {}
 
     def discover_available_targets(self) -> tuple:
-        """Discover available targets and categorize by track type."""
+        """
+        INTELLIGENT TRACK CATEGORIZATION:
+        
+        Automatically categorizes trained models into research vs product tracks
+        based on their task_type metadata. This enables the report generator to
+        present results within the correct scientific context:
+        
+        - Product Track (short_term): Algorithm validation results
+        - Research Track (long_term): Predictability boundary analysis
+        
+        The dual presentation highlights the methodological rigor and prevents
+        misinterpretation of results across different validation contexts.
+        """
         research_targets = []
         product_track_available = False
         product_track_r2 = None

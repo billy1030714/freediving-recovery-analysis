@@ -22,7 +22,11 @@ from paths import (
 # --- Function Definitions ---
 
 def parse_hr_from_xml(xml_path: Path, today_date: datetime.date, hr_min: int, hr_max: int) -> pd.DataFrame:
-    """Parses heart rate data from export.xml, cleans it, and returns a DataFrame."""
+    """
+    MEMORY-EFFICIENT XML PARSING:
+    Uses iterparse() instead of parse() to handle large Apple Health export files
+    without loading entire XML tree into memory. Critical for files >1GB.
+    """
     if not xml_path.exists():
         raise FileNotFoundError(f"Apple Health's export.xml not found. Please check the path: {xml_path}")
 
@@ -36,7 +40,7 @@ def parse_hr_from_xml(xml_path: Path, today_date: datetime.date, hr_min: int, hr
                     rows.append({"Time": t, "HR": float(v)})
                 except (ValueError, TypeError): 
                     pass # Ignore records with invalid values
-        elem.clear() # Free up memory
+        elem.clear() # Memory optimization: Clear processed XML elements to prevent memory accumulation during large file parsing
 
     if not rows: 
         raise ValueError("No heart rate (HeartRate) records found in export.xml.")
@@ -56,7 +60,11 @@ def parse_hr_from_xml(xml_path: Path, today_date: datetime.date, hr_min: int, hr
     return df
 
 def load_historical_apnea_events(directory: Path) -> pd.DataFrame:
-    """Scans the `converted` directory for all apnea_events_*.csv files, then merges and deduplicates them."""
+    """
+    BACKWARD COMPATIBILITY HANDLER:
+    Automatically generates row_id from timestamps for legacy CSV files
+    that don't have this identifier column.
+    """
     event_files = sorted(directory.glob("apnea_events_*.csv"))
     if not event_files: 
         return pd.DataFrame(columns=["row_id", "end_apnea"])
@@ -113,6 +121,8 @@ def main():
     
     is_ci = os.getenv('CI') or os.getenv('GITHUB_ACTIONS')
     file_suffix = '_ci' if is_ci else ''
+    # CI ENVIRONMENT ADAPTATION: Automatically switches to de-identified processing
+    # and skips interactive input when running in automated environments
     
     DIR_CONVERTED.mkdir(parents=True, exist_ok=True)
     today_date = datetime.now().date()

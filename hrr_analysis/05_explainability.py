@@ -4,7 +4,7 @@ Generates SHAP, LIME, permutation importance, and PDP visualizations.
 """
 # --- Stabilization Settings and Library Imports ---
 import os
-# This setting is placed before importing scientific computing libraries to ensure stability.
+# Ensure multiprocessing stability
 os.environ.setdefault("JOBLIB_MULTIPROCESSING", "0") 
 import json
 import logging
@@ -176,9 +176,17 @@ class ModelExplainer:
             
     def generate_pdp(self):
         """
-        Generates and saves Partial Dependence Plots (PDP).
-        This function is now robust enough to handle models with either 
-        .feature_importances_ (tree-based) or .coef_ (linear) attributes.
+        PARTIAL DEPENDENCE PLOT GENERATION:
+        
+        This method handles both tree-based models (XGBoost, Random Forest) with
+        feature_importances_ and linear models (Ridge) with coefficients.
+        
+        For linear models, we use absolute coefficient values as importance proxy,
+        which represents feature contribution magnitude regardless of direction.
+        
+        PDP analysis reveals how individual features affect predictions while
+        marginalizing over all other features - crucial for understanding
+        model behavior in the dual-track validation framework.
         """
         try:
             # Extract the final regressor model from the pipeline

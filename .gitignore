@@ -70,3 +70,6 @@ pip-log.txt
 
 # --- MLflow ---
 mlruns/
+/models
+/explainability
+/predictions

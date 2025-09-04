@@ -6,8 +6,15 @@ import os
 
 def find_project_root(anchor_file: str = ".project_root") -> Path:
     """
-    Start from the current file or working directory, and search upwards for the directory containing the anchor file.
-    This is currently the most robust industry method for locating the project root directory.
+    ROBUST PROJECT ROOT DETECTION:
+    
+    Algorithm:
+    1. Start from current file's directory (or cwd if __file__ unavailable)
+    2. Search upward through parent directories
+    3. Look for anchor file (.project_root) in each directory
+    4. Return first match or raise FileNotFoundError
+    
+    This cross-platform approach works regardless of execution context.
     """
     try:
         start_path = Path(__file__).resolve().parent

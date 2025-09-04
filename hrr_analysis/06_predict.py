@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 
 import joblib, numpy as np, pandas as pd, shap
 from lime.lime_tabular import LimeTabularExplainer
-# --- [FIX] Import the new RMSE function ---
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 
 def root_mean_squared_error(y_true, y_pred):
@@ -62,7 +61,17 @@ class Predictor:
         logging.info(f"Successfully loaded model, features, and data from {data_path.name}.")
 
     def run_predictions(self) -> pd.DataFrame:
-        """Runs predictions on the loaded data."""
+        """
+        PERSONALIZED PERCENTILE RANKING:
+        
+        For ERS predictions, this method calculates percentile rankings based on
+        the training data distribution. This provides users with interpretable
+        feedback: "Your recovery score is better than X% of similar sessions."
+        
+        The percentile calculation uses scipy.stats.percentileofscore with the
+        training distribution as reference, enabling personalized performance
+        benchmarking against historical data patterns.
+        """
         X = self.df[[col for col in self.features if col in self.df.columns]]
         self.df['y_pred'] = self.pipe.predict(X)
         if self.target in self.df.columns:
@@ -82,7 +91,6 @@ class Predictor:
         out_df.to_parquet(self.output_dir / "preds.parquet", index=False)
         logging.info(f"Prediction results saved to: {self.output_dir / 'preds.csv'}")
 
-        # --- [CRITICAL FIX] ---
         # We need to recreate the time-series split to isolate the validation set for metric calculation.
         # This ensures the metrics here are consistent with the ones from the training script.
         

@@ -46,8 +46,15 @@ def discover_available_targets() -> list:
 
 def should_generate_detailed_plots(target: str) -> bool:
     """
-    Determine if detailed plots should be generated based on model performance.
-    Only generate detailed visualizations for models with reasonable performance.
+    COMPUTATIONAL EFFICIENCY OPTIMIZATION:
+    
+    Only generates resource-intensive detailed visualizations for models
+    with meaningful predictive performance (R² > 0.1) or for ERS regardless
+    of track type.
+    
+    This prevents wasting computational resources on extensive plotting for
+    models that demonstrate the negative results in our research track,
+    while ensuring the successful ERS algorithm validation is always visualized.
     """
     try:
         card_path = DIR_MODELS / target / "dataset_card.json"

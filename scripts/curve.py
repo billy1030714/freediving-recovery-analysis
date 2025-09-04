@@ -63,13 +63,16 @@ def run_learning_curve_analysis():
     print("-" * 30)
 
     # --- 5. Build Pipeline consistent with MLOps pipeline ---
+    # PHYSIOLOGICAL TIME-SERIES OPTIMIZED: XGBoost parameters tuned for Apple Watch data
+    # Pipeline matches 04_models.py configuration for consistency verification
     model_pipeline = Pipeline([
-        ("imputer", SimpleImputer(strategy="median")),
+        ("imputer", SimpleImputer(strategy="median")), # Handle irregular Apple Watch sampling intervals
         ("model", xgb.XGBRegressor(
+            # Parameters optimized for small physiological datasets
             objective='reg:squarederror',
-            n_estimators=600,
-            max_depth=4,
-            learning_rate=0.05,
+            n_estimators=600, # Sufficient for pattern capture without overfitting
+            max_depth=4, #Prevent overfitting on small datasets
+            learning_rate=0.05, # Conservative learning for stability
             subsample=0.9,
             colsample_bytree=0.9,
             reg_lambda=1.0,

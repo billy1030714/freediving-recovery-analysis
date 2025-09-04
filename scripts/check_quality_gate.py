@@ -6,9 +6,15 @@ import json
 import sys
 from pathlib import Path
 import argparse
+import yaml
+
+def get_quality_threshold():
+    """Load quality threshold from params.yaml"""
+    with open("params.yaml", "r") as f:
+        params = yaml.safe_load(f)
+    return params['training']['quality_gate_threshold']
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
-from hrr_analysis.config import QUALITY_GATE_THRESHOLD
 
 def check_gate(target: str) -> None:
     """Check the quality gate for the specified target"""
@@ -26,7 +32,8 @@ def check_gate(target: str) -> None:
 
     print(f"\n--- Checking Quality Gate for Target: {target} ---")
     print(f"R² Score: {r2_score:.4f}" if r2_score is not None else "R² Score: N/A")
-    print(f"Quality Gate Threshold: > {QUALITY_GATE_THRESHOLD}")
+    threshold = get_quality_threshold()
+    print(f"Quality Gate Threshold: > {threshold}")
     
     if passed:
         print(f"✅ PASS: Model for '{target}' passed the quality gate.")

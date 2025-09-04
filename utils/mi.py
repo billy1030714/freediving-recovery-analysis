@@ -1,5 +1,5 @@
 # utils/mi.py
-# -*- coding: utf-8 -*-
+
 """
 Mutual Information (MI) Utility: Ready for use by any module from 01-08.
 
@@ -55,7 +55,18 @@ def _safe_numeric(df: pd.DataFrame) -> pd.DataFrame:
     return num
 
 def _mi_scores(X: pd.DataFrame, y: pd.Series) -> pd.Series:
-    """Calculates mutual information scores for features in X against target y."""
+    """
+    MUTUAL INFORMATION CALCULATION WITH ROBUST ERROR HANDLING:
+    
+    Processing steps:
+    1. Fill NaN values: X with 0.0, y with median for stability
+    2. Handle edge case: all-NaN targets get zero array
+    3. Compute MI scores using sklearn's mutual_info_regression
+    4. Re-add dropped constant columns with score = 0.0
+    5. Return sorted MI scores (highest first)
+    
+    This ensures stable computation even with irregular or sparse data.
+    """
     # Fill NaNs in X with 0; fill NaNs in y with its median for robustness.
     Xn = X.fillna(0.0)
     yv = pd.to_numeric(y, errors="coerce")
@@ -100,7 +111,16 @@ def _default_excludes(target_col: str) -> set[str]:
     }
 
 def _pick_top_features(mi_series: pd.Series, top_n: int, excludes: set[str]) -> list[str]:
-    """Selects top N features based on MI scores, enforcing inclusion of essential features."""
+    """
+    INTELLIGENT FEATURE SELECTION WITH MANDATORY INCLUSIONS:
+    
+    Priority logic:
+    1. Select top N features by MI score (excluding blacklisted columns)
+    2. Force inclusion of critical features like 'normalized_slope'
+    3. Explicitly exclude legacy/deprecated feature names
+    
+    This ensures both data-driven and domain-knowledge-driven selection.
+    """
     top = [c for c in mi_series.index if c not in excludes][:top_n]
     # Force inclusion of key features if they exist
     for must in ("normalized_slope",):

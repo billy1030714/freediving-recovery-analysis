@@ -1,4 +1,7 @@
-# hrr_analysis/02_features.py - CORRECTED VERSION
+"""
+02_features.py - Heart Rate Recovery Feature Engineering Pipeline
+Extracts physiological recovery metrics from Apple Watch heart rate data.
+"""
 
 # --- Library Imports ---
 import os
@@ -17,7 +20,7 @@ from paths import DIR_CONVERTED, DIR_FEATURES, get_daily_path
 
 # --- Constants and Settings ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [%(levelname)s] - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-DATE_RE = re.compile(r"(\d{8})")
+DATE_RE = re.compile(r"(\d{8})") # Matches YYYYMMDD date format in filenames
 FINAL_COLUMNS: List[str] = [
     # Event Identifiers
     "row_id", "date", "end_apnea_time",
@@ -48,6 +51,11 @@ class LoadedDay:
 
 # --- Core Functions ---
 def _get_hr_with_tolerance(df: pd.DataFrame, target_time: pd.Timestamp, tol: int = 3) -> Optional[float]:
+    """
+    TEMPORAL TOLERANCE MATCHING:
+    Apple Watch sampling is irregular (~1-5 second intervals), so we search
+    within ±3 second window and select the closest timestamp match.
+    """
     df_win = df[(df["Time"] >= target_time - timedelta(seconds=tol)) & (df["Time"] <= target_time + timedelta(seconds=tol))]
     if df_win.empty: return None
     idx = (df_win["Time"] - target_time).abs().idxmin()
@@ -65,12 +73,30 @@ def _clip01(v):
     return float(np.clip(v, 0.0, 1.0)) if v is not None and np.isfinite(v) else None
 
 def _get_dynamic_ideal_slope(starting_hr: float, resting_hr: float = 60.0, peak_hr: float = 130.0, max_ideal_slope: float = 1.0) -> float:
+    """
+    PHYSIOLOGICALLY-ADAPTIVE NORMALIZATION:
+    Calculates expected recovery slope based on individual's HR range.
+    Higher starting HR → steeper expected slope for equivalent recovery quality.
+    """
     if starting_hr <= resting_hr: return 0.1
     scale = (starting_hr - resting_hr) / (peak_hr - resting_hr)
     ideal_slope = max_ideal_slope * scale
     return max(0.1, ideal_slope)
 
 def analyze_event(hr_df: pd.DataFrame, end_apnea_time: pd.Timestamp, config: Dict) -> Optional[Dict]:
+    """
+    CORE RECOVERY ANALYSIS ENGINE:
+    
+    Processing Pipeline:
+    1. Baseline calculation (pre-apnea window)
+    2. Peak detection (post-apnea search window)  
+    3. Recovery ratio calculation at 60s and 90s
+    4. Slope analysis with peak-timing adaptation
+    5. HRV proxy feature extraction
+    6. ERS composite score generation
+    
+    Handles edge cases: abnormal peaks, missing data, irregular sampling
+    """
     if pd.isna(end_apnea_time): return None
     df = hr_df.copy().dropna(subset=["Time", "HR"]).sort_values("Time")
     if df.empty: return None
@@ -93,6 +119,8 @@ def analyze_event(hr_df: pd.DataFrame, end_apnea_time: pd.Timestamp, config: Dic
     ts_slope = event_t0 + timedelta(seconds=slope_window_config[0])
     te_slope = event_t0 + timedelta(seconds=slope_window_config[1])
     is_peak_abnormal = (time_to_peak_hr > 45) or (ts_slope <= time_peak_hr_timestamp <= te_slope)
+    # PEAK ANOMALY DETECTION: Skip slope calculation if peak occurs too late (>45s)
+    # or falls within slope measurement window (would bias the slope calculation)
     slope = np.nan if is_peak_abnormal else _lin_slope_with_tolerance(df, ts_slope, te_slope, tol=3)
 
     hr60 = _get_hr_with_tolerance(df, event_t0 + timedelta(seconds=60))
@@ -118,6 +146,8 @@ def analyze_event(hr_df: pd.DataFrame, end_apnea_time: pd.Timestamp, config: Dic
     rmssd, sdnn, pnn50, mean_rr = None, None, None, None
     if len(hrv_df) >= 10:
         rr_intervals = (60000.0 / hrv_df["HR"]).to_numpy()
+        # HRV PROXY CALCULATION: Convert HR to RR intervals (milliseconds)
+        # Formula: RR = 60000 / HR, where 60000 = 60 seconds * 1000 ms/second
         if len(rr_intervals) > 1:
             diffs = np.diff(rr_intervals)
             rmssd = np.sqrt(np.mean(diffs**2))
@@ -167,6 +197,7 @@ def add_contextual_features(df: pd.DataFrame) -> pd.DataFrame:
     df['baseline_diff'] = df['HRbaseline'] - df['personal_baseline_28d']
     df['time_since_last_apnea'] = df['end_apnea_time'].diff().dt.total_seconds()
     conditions = [df['baseline_diff'].abs() <= 3, df['baseline_diff'].abs() <= 5]
+    # BASELINE QUALITY SCORING: 1.0 for excellent (±3 bpm), 0.5 for good (±5 bpm), 0.0 for poor
     df['baseline_quality_score'] = np.select(conditions, [1.0, 0.5], default=0.0)
     return df
 
