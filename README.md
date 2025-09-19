@@ -1,7 +1,9 @@
 # Personalized Freediving Recovery Assessment
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+
 [![CI Validation](https://github.com/billy1030714/freediving-recovery-analysis/actions/workflows/main.yml/badge.svg)](https://github.com/billy1030714/freediving-recovery-analysis/actions)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A machine learning pipeline for analyzing freediving recovery patterns using Apple Watch data, implementing a novel **dual-track validation strategy** that separates algorithm validation from predictive assessment.
