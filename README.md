@@ -19,7 +19,7 @@ The project's core innovation is a dual-track methodology that systematically se
 | Track | Purpose | Feature Set | ERS R² Score | Performance Drop |
 |-------|---------|-------------|:------------:|:---------------:|
 | **Product Design** | Algorithm Validation | Pre-dive + **ERS Components** | **0.9175** | - |
-| **Research Validation** | Predictability Assessment | **Only** Pre-dive Features | **-0.1015** | **1.0190**  (102% decrease) |
+| **Research Validation** | Predictability Assessment | **Only** Pre-dive Features | **-0.1015** | **1.0190**<br> (102% decrease) |
 
 This dramatic contrast proves that:
 1. **ERS algorithm design is scientifically sound** (Product Track validates the components)
