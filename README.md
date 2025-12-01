@@ -118,7 +118,7 @@ freediving-recovery-analysis/
 
 ## 🔧 Technical Stack
 
-**ML Framework:** XGBoost, scikit-learn, Random Forest, Ridge Regression
+**ML Framework:** XGBoost, Random Forest, Ridge Regression, scikit-learn
 
 **MLOps & Automation:**
 - **Poetry**: Dependency management & reproducible environments
@@ -139,38 +139,82 @@ freediving-recovery-analysis/
 
 ## 🧪 Validation Strategy
 
-### Time-Series Data Split
-- **Training**: First 70% of data (chronologically)
-- **Validation**: Last 30% of data (chronologically)
-- **Rationale**: Prevents future information leakage
+### Time Synchronization
 
-### Dual-Track Feature Exclusion
-- **Research Track**: Strict exclusion of all post-dive features and ERS components
-- **Product Track**: Inclusion of ERS components for algorithm validation
-- **CI Validation**: Automated testing of Product Track core logic
+Apple Watch's irregular PPG sampling requires tolerance window alignment:
+
+| Window | Success Rate | Features | NaN Count | Completeness |
+|:------:|:------------:|:--------:|:---------:|:------------:|
+| ±1s | 90.9% | 1.62 | 167 | 54.0% |
+| ±2s | 100.0% | 2.40 | 73 | 80.0% |
+| **±3s** | **100.0%** | **2.73** | **33** | **91.0%** |
+
+**Validation (±3s vs ±0s):** Paired t-test p=0.89, bias=0.0015, r=0.89 (p<0.001)
+
+### Data Split Strategy
+- **Training**: First 70% (~85 sessions) chronologically
+- **Validation**: Last 30% (~36 sessions) - simulates "unseen future"
+- **Rationale**: Prevents temporal information leakage
+
+### Statistical Robustness (Product Track)
+- **Overfitting Check**: Train-test R² gap = 0.094, learning curve stable at 50-60 samples
+- **Residuals**: Normally distributed (Shapiro-Wilk p=0.313), no systematic bias
+- **Agreement**: Bland-Altman bias = 0.006, 95% LoA = ±0.10
+- **Calibration**: Near-ideal diagonal, validated across ERS levels
+
+### Overfitting Prevention
+- **ERS vs HRR60 correlation**: r=0.64 (p<0.001) - physiological validity confirmed
+- **Learning curve**: Validation performance plateaus after 50-60 samples
+- No evidence of memorization in train/test residual comparison
+
+### Physiological Validation
+Recovery patterns validated across ERS spectrum:
+- **High ERS (1.00)**: Rapid, stable recovery curve
+- **Medium ERS (0.72)**: Moderate recovery with minor oscillations
+- **Low ERS (0.15)**: Prolonged elevated HR, poor vagal reactivation
 
 ## 🔍 Scientific Insights
 
-### Boundary Definition
-The research successfully quantified the limits of pre-dive feature-based prediction:
-- **Baseline physiological state** (mean_rr_post): Moderately predictable (R² = 0.31)
-- **Dynamic recovery metrics** (ERS, RMSSD, SDNN): Not predictable (R² < 0.05)
-- **Recovery event characteristics** (HRR60): Not predictable (R² ≈ 0)
+### Algorithm Validation (Product Track)
+- ERS components align with vagal reactivation physiology
+- High internal consistency (R²=0.92) validates descriptive capability
+- Feature importance: 60s ratio > 90s ratio > normalized slope
 
-### Algorithm Validation
-SHAP analysis in the Product Track confirms that `recovery_ratio_60s`, `recovery_ratio_90s`, and `normalized_slope` are the most important ERS components, scientifically validating the algorithm design.
+### Prediction Boundaries (Research Track)
+- **Baseline metrics (mean_rr_post)**: Moderately predictable (R²=0.31, r=-0.687 with baseline HR)
+- **Dynamic metrics (ERS, RMSSD, SDNN)**: Not predictable from pre-dive features
+- **Implication**: Real-time recovery assessment requires post-event data; consumer wearables cannot predict recovery quality in advance
 
-## 🏥 Clinical Relevance
+### Methodological Contribution
+- Dual-track approach prevents conflating "measurement validity" with "predictive power"
+- Establishes reproducible framework for wearable device validation
+- Quantifies information dimensionality constraints in consumer health tech
+
+## 💡 Use Cases
 
 ### Immediate Applications
-- Post-exercise recovery assessment for athletes
-- Training load optimization in breath-hold sports
-- Safety monitoring during freediving activities
+- Real-time recovery monitoring for freedivers/breath-hold athletes
+- Training load optimization and session spacing
+- Safety thresholds for high-risk apnea activities
 
-### Future Translation Potential
-- OSA (Obstructive Sleep Apnea) severity assessment
-- COPD exacerbation prediction using similar physiological patterns
-- Personalized cardiovascular risk stratification
+### Research Extensions
+- Cross-subject validation for population-level generalizability
+- Multi-modal integration (SpO₂, skin temp, HRV metrics)
+- Clinical translation: OSA severity, COPD exacerbation prediction
+
+## ⚠️ Limitations
+- **External Validity**: N-of-1 design (121 sessions, single subject) provides deep individual insights but limited population generalizability
+- **Data Dimensionality**: Heart rate-only analysis; multi-modal signals needed for comprehensive state assessment
+- **Device Constraints**: Apple Watch irregular sampling and motion artifact sensitivity
+- **Scenario Specificity**: ERS designed for static apnea; other modalities (dynamic diving, HIIT) require validation
+
+## 🗺️ Roadmap
+- [] Late Recovery Score (LRS) for ≥90s window
+- [] Cross-subject validation (N>1)
+- [] SpO₂/temp integration + data fusion algorithms
+- [] LSTM/GRU temporal models
+- [] Real-time on-device deployment
+- [] Clinical trial design for OSA/COPD applications
 
 ## 👤 Author
 
@@ -195,4 +239,4 @@ This project is licensed under the MIT License. See the LICENSE file for details
 
 ---
 
-*This project demonstrates how rigorous scientific methodology can simultaneously advance practical applications and fundamental understanding in wearable health technology.*
+*Core Philosophy: Rigorous methodology to distinguish what we can measure from what we can predict in consumer health technology.*
