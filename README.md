@@ -209,12 +209,12 @@ Recovery patterns validated across ERS spectrum:
 - **Scenario Specificity**: ERS designed for static apnea; other modalities (dynamic diving, HIIT) require validation
 
 ## 🗺️ Roadmap
-- [] Late Recovery Score (LRS) for ≥90s window
-- [] Cross-subject validation (N>1)
-- [] SpO₂/temp integration + data fusion algorithms
-- [] LSTM/GRU temporal models
-- [] Real-time on-device deployment
-- [] Clinical trial design for OSA/COPD applications
+- [ ] Late Recovery Score (LRS) for ≥90s window
+- [ ] Cross-subject validation (N>1)
+- [ ] SpO₂/temp integration + data fusion algorithms
+- [ ] LSTM/GRU temporal models
+- [ ] Real-time on-device deployment
+- [ ] Clinical trial design for OSA/COPD applications
 
 ## 👤 Author
 
