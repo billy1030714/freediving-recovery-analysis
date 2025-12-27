@@ -1,0 +1,105 @@
+{
+  "metadata": {
+    "timestamp": "2025-10-05T23:12:32.917554",
+    "model": "xgb"
+  },
+  "data_completeness": {
+    "total": 121,
+    "complete_3": 93,
+    "partial_2": 23,
+    "partial_1": 5
+  },
+  "calculation_verification": {
+    "verified": true,
+    "max_diff": 0.0,
+    "r2": 1.0
+  },
+  "criterion_validity": {
+    "correlation": {
+      "pearson_r": 0.6401847900947908,
+      "pearson_p": 7.763473843025634e-15,
+      "spearman_r": 0.5742056205747021,
+      "interpretation": "Moderate"
+    },
+    "stability": {
+      "ers_cv": 0.23580708918603205,
+      "hrr60_cv": 0.34936795323134084,
+      "improvement_pct": 32.50465962747082
+    }
+  },
+  "train_test_performance": {
+    "train": {
+      "r2": 0.99998355835054,
+      "mae": 0.0005054504956563333,
+      "rmse": 0.000663666485633681
+    },
+    "test": {
+      "r2": 0.911894739767856,
+      "mae": 0.0356366925716583,
+      "rmse": 0.048837830484763554
+    },
+    "gap": 0.08808881858268403,
+    "severity": "MILD"
+  },
+  "learning_curve_analysis": {
+    "train_sizes": [
+      16,
+      24,
+      31,
+      39,
+      46,
+      54,
+      61,
+      69,
+      76,
+      84
+    ],
+    "train_scores": [
+      0.9999933238415282,
+      0.9999887877545506,
+      0.9999866206858481,
+      0.9999875201362314,
+      0.9999841450162706,
+      0.9999875864381186,
+      0.9999887943650331,
+      0.9999864264634208,
+      0.9999836044213938,
+      0.9999837224238585
+    ],
+    "val_scores": [
+      0.5441021512530801,
+      0.6496345726198464,
+      0.6328108015995597,
+      0.6526466424087932,
+      0.6841674106672535,
+      0.7776439091427482,
+      0.8629940094501029,
+      0.8942099168314515,
+      0.8930922125308753,
+      0.9060241988621005
+    ],
+    "convergence_point": null,
+    "final_gap": 0.09395952356175796,
+    "final_train_score": 0.9999837224238585,
+    "final_val_score": 0.9060241988621005
+  },
+  "assessment": {
+    "checks": {
+      "calculation_verified": true,
+      "correlation_adequate": true,
+      "overfitting_acceptable": true,
+      "test_performance_good": true,
+      "data_quality_good": true,
+      "learning_curve_converged": false
+    },
+    "status": "GOOD",
+    "key_findings": {
+      "ers_hrr60_correlation": 0.6401847900947908,
+      "stability_improvement": 32.50465962747082,
+      "overfitting_gap": 0.08808881858268403,
+      "test_r2": 0.911894739767856,
+      "learning_convergence_samples": null,
+      "learning_final_gap": 0.09395952356175796
+    }
+  }
+}
