@@ -1,22 +1,64 @@
-# === Data Cleaning & Feature Engineering Parameters ===
+# ===============================
+# Data Cleaning Parameters
+# Used in: 01_cleaning.py → parse_hr_from_xml()
+# ===============================
 data_cleaning:
-  hr_min: 30
-  hr_max: 200
+  hr_min: 30        # [bpm] Minimum valid heart rate; values below are discarded
+  hr_max: 200       # [bpm] Maximum valid heart rate; values above are discarded
 
+
+# ===============================
+# Feature Engineering Parameters
+# Used in: 02_features.py → analyze_event()
+# All time units are in SECONDS
+# Time reference point: end_apnea_time (event_t0)
+# ===============================
 feature_engineering:
+
+  # Baseline HR calculation window BEFORE apnea end
+  # Used in analyze_event():
+  #   df[(Time >= t0 - base_window[0]) & (Time < t0 - base_window[1])]
+  # Meaning: baseline is computed from [t0-330s, t0-150s)
   base_window: [330, 150]
+
+  # Recovery slope window if peak occurs EARLY (≤30s after apnea end)
+  # Used to define [t0 + slope_w1[0], t0 + slope_w1[1]]
+  # Typical interpretation: early recovery dynamics
   slope_w1: [30, 90]
+
+  # Recovery slope window if peak occurs LATE (>30s after apnea end)
+  # Used to define [t0 + slope_w2[0], t0 + slope_w2[1]]
+  # Typical interpretation: delayed recovery dynamics
   slope_w2: [45, 105]
+
+  # Maximum allowed time window to search for HR peak after apnea end
+  # Used in peak detection:
+  #   df[(Time >= t0) & (Time <= t0 + peak_max_seconds)]
   peak_max_seconds: 120
+
+  # HRV proxy calculation window AFTER apnea end
+  # Used in HRV feature extraction:
+  #   df[(Time >= t0 + hrv_window[0]) & (Time <= t0 + hrv_window[1])]
+  # Typical window: 3–6 minutes post-event
   hrv_window: [180, 360]
 
-# === Model Training Parameters ===
-training:
-  random_seed: 42
-  split_ratio: 0.7 # Time-series split: 70% train, 30% test
-  quality_gate_threshold: 0.05
 
+# ===============================
+# Model Training Parameters
+# Used in: 04_models.py
+# ===============================
+training:
+  random_seed: 42            # Reproducibility seed for all model training
+  split_ratio: 0.7           # Time-series split: first 70% train, last 30% test
+  quality_gate_threshold: 0.05  # Minimum R² required to pass quality gate
+
+
+# ===============================
+# Model Hyperparameters
+# Used in: 04_models.py → ModelTrainer
+# ===============================
 models:
+
   xgb:
     n_estimators: 600
     max_depth: 4
@@ -27,10 +69,12 @@ models:
     reg_alpha: 0.0
     n_jobs: -1
     tree_method: "hist"
+
   rf:
     n_estimators: 600
     max_depth: null
     min_samples_leaf: 2
     n_jobs: -1
+
   ridge:
     alpha: 1.0

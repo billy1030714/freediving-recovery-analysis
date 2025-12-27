@@ -1,72 +1,105 @@
 # HRR_project/paths.py
 
+from __future__ import annotations
+
 from pathlib import Path
 from datetime import date
+from typing import Final
 import os
 
-def find_project_root(anchor_file: str = ".project_root") -> Path:
+
+def find_project_root(
+    anchor: str = ".project_root",
+    start_path: Path | None = None
+) -> Path:
     """
-    ROBUST PROJECT ROOT DETECTION:
-    
-    Algorithm:
-    1. Start from current file's directory (or cwd if __file__ unavailable)
-    2. Search upward through parent directories
-    3. Look for anchor file (.project_root) in each directory
-    4. Return first match or raise FileNotFoundError
-    
-    This cross-platform approach works regardless of execution context.
+    Locate the project root directory by searching for an anchor file.
+
+    Parameters
+    ----------
+    anchor : str
+        Name of the anchor file that defines the project root.
+        This file must exist directly under the root directory.
+    start_path : Path | None
+        Directory to start searching from.
+        If None, the directory of this file is used.
+
+    Returns
+    -------
+    Path
+        Absolute path to the project root directory.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the anchor file cannot be found in any parent directory.
     """
-    try:
+    if start_path is None:
         start_path = Path(__file__).resolve().parent
-    except NameError:
-        start_path = Path.cwd()
-    
-    for parent in [start_path] + list(start_path.parents):
-        if (parent / anchor_file).exists():
+
+    for parent in (start_path, *start_path.parents):
+        if (parent / anchor).is_file():
             return parent
-            
+
     raise FileNotFoundError(
-        f"Cannot find the project anchor file '{anchor_file}'. Please ensure it is located in the project root directory."
+        f"Project root not found: anchor file '{anchor}' does not exist."
     )
 
-PROJECT_ROOT = find_project_root()
 
-# --- Main folder paths ---
-DIR_APPLE_HEALTH = PROJECT_ROOT / "apple_health_export"
-DIR_CONVERTED = PROJECT_ROOT / "converted"
-DIR_FEATURES = PROJECT_ROOT / "features"
-DIR_MODELS = PROJECT_ROOT / "models"
-DIR_EXPLAINABILITY = PROJECT_ROOT / "explainability"
-DIR_PREDICTIONS = PROJECT_ROOT / "predictions"
-DIR_REPORT = PROJECT_ROOT / "report"
-DIR_UTILS = PROJECT_ROOT / "utils"
-DIR_NOTEBOOKS = PROJECT_ROOT / "notebooks"
+# -----------------------------------------------------------------------------
+# Project root (resolved once, treated as immutable)
+# -----------------------------------------------------------------------------
+PROJECT_ROOT: Final[Path] = find_project_root()
 
-# --- Key input files ---
-# determine by env
-xml_filename = os.getenv("XML_FILENAME", "export.xml")
-FILE_APPLE_HEALTH_XML = DIR_APPLE_HEALTH / xml_filename
 
-# --- Helper function for dynamic path generation ---
-def get_daily_path(directory: Path, data_type: str, date_obj: date, extension: str) -> Path:
-    """Generate a standardized file path with date."""
+# -----------------------------------------------------------------------------
+# Directory structure (pure definitions, no I/O)
+# -----------------------------------------------------------------------------
+DIR_APPLE_HEALTH: Final[Path] = PROJECT_ROOT / "apple_health_export"
+DIR_CONVERTED: Final[Path] = PROJECT_ROOT / "converted"
+DIR_FEATURES: Final[Path] = PROJECT_ROOT / "features"
+DIR_MODELS: Final[Path] = PROJECT_ROOT / "models"
+DIR_EXPLAINABILITY: Final[Path] = PROJECT_ROOT / "explainability"
+DIR_PREDICTIONS: Final[Path] = PROJECT_ROOT / "predictions"
+DIR_REPORT: Final[Path] = PROJECT_ROOT / "report"
+DIR_UTILS: Final[Path] = PROJECT_ROOT / "utils"
+DIR_NOTEBOOKS: Final[Path] = PROJECT_ROOT / "notebooks"
+
+
+# -----------------------------------------------------------------------------
+# Key input files
+# -----------------------------------------------------------------------------
+XML_FILENAME: Final[str] = os.getenv("XML_FILENAME", "export.xml")
+FILE_APPLE_HEALTH_XML: Final[Path] = DIR_APPLE_HEALTH / XML_FILENAME
+
+
+def get_daily_path(
+    directory: Path,
+    prefix: str,
+    date_obj: date,
+    suffix: str
+) -> Path:
+    """
+    Generate a standardized date-based file path.
+
+    Naming convention:
+        {prefix}_YYYYMMDD{suffix}
+
+    Parameters
+    ----------
+    directory : Path
+        Base directory for the file.
+    prefix : str
+        Semantic identifier of the data type (e.g., 'features', 'events').
+    date_obj : date
+        Date used for filename generation.
+    suffix : str
+        File suffix including extension (e.g., '.csv', '.parquet').
+
+    Returns
+    -------
+    Path
+        Full path to the generated file.
+    """
     date_str = date_obj.strftime("%Y%m%d")
-    filename = f"{data_type}_{date_str}{extension}"
-    return directory / filename
-
-# --- Self-check when this script is executed directly ---
-if __name__ == '__main__':
-    print(f"Project root directory is defined as: {PROJECT_ROOT}")
-    assert "HRR_project" in str(PROJECT_ROOT), "The project root directory seems incorrect."
-    
-    print("\nAll main paths:")
-    print(f"  Models directory: {DIR_MODELS}")
-    print(f"  Explainability directory: {DIR_EXPLAINABILITY}")
-    
-    # Ensure folders exist for checking
-    for dir_path in [DIR_MODELS, DIR_EXPLAINABILITY]:
-        dir_path.mkdir(parents=True, exist_ok=True)
-    
-    assert DIR_EXPLAINABILITY.exists(), "Explainability directory check failed!"
-    print("\nPath check complete, all main directories exist.")
-    
+    return directory / f"{prefix}_{date_str}{suffix}"
