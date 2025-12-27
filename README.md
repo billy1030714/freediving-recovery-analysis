@@ -42,12 +42,12 @@ Tests true predictability using only pre-dive features. These results define the
 
 | Target Metric | Best Model | Best R² Score | Predictability |
 |---------------|------------|:-------------:|----------------|
-| **mean_rr_post** | Ridge | **0.3114** | ✅ Limited but meaningful |
-| **pnn50_post** | Ridge | **0.0371** | ⚠️ Minimal |
-| **hrr60** | Random Forest | **-0.0380** | ❌ Not predictable |
-| **sdnn_post** | Ridge | **-0.0732** | ❌ Not predictable |
-| **ERS** | Random Forest | **-0.1015** | ❌ Not predictable |
-| **rmssd_post** | Ridge | **-0.1138** | ❌ Not predictable |
+| **mean_rr_post** | Ridge | **0.3114** | Limited but meaningful |
+| **pnn50_post** | Ridge | **0.0371** | Minimal |
+| **hrr60** | Random Forest | **-0.0380** | Not predictable |
+| **sdnn_post** | Ridge | **-0.0732** | Not predictable |
+| **ERS** | Random Forest | **-0.1015** | Not predictable |
+| **rmssd_post** | Ridge | **-0.1138** | Not predictable |
 
 ## Quick Start
 
