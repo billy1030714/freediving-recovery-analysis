@@ -6,11 +6,11 @@
 
 A machine learning pipeline for analyzing freediving recovery patterns using Apple Watch data, implementing a novel **dual-track validation strategy** that separates algorithm validation from predictive assessment.
 
-## 🎯 Research Objective
+## Research Objective
 
 This project establishes a rigorous validation framework for consumer wearable health monitoring, using freediving recovery as a physiological model. The core contribution is a **dual-track validation methodology** that scientifically delineates the capabilities and limitations of consumer-grade devices in personalized health assessment.
 
-## 🔬 Key Innovation: Dual-Track Validation
+## Key Innovation: Dual-Track Validation
 
 The project's core innovation is a dual-track methodology that systematically separates algorithm validation from scientific predictability testing.
 
@@ -26,7 +26,7 @@ This dramatic contrast proves that:
 2. **Prediction boundaries are clearly defined** (Research Track shows limits without components)
 3. The dual-track strategy successfully separates algorithm design from predictive assessment
 
-## 📊 Complete Results Summary
+## Complete Results Summary
 
 ### Product Track Results (short_term mode)
 Validates the Early Recovery Score (ERS) as a descriptive tool. This is the core logic validated by our automated CI pipeline.
@@ -49,7 +49,7 @@ Tests true predictability using only pre-dive features. These results define the
 | **ERS** | Random Forest | **-0.1015** | ❌ Not predictable |
 | **rmssd_post** | Ridge | **-0.1138** | ❌ Not predictable |
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 ```bash
@@ -87,7 +87,7 @@ export TARGETS="ERS,rmssd_post"
 poetry run dvc repro
 ```
 
-## 🏗️ Architecture & Pipeline
+## Architecture & Pipeline
 
 The project follows a modular pipeline structure managed by `dvc.yaml`.
 
@@ -116,7 +116,7 @@ freediving-recovery-analysis/
 └── paths.py                # Path configuration and project root detection
 ```
 
-## 🔧 Technical Stack
+## Technical Stack
 
 **ML Framework:** XGBoost, Random Forest, Ridge Regression, scikit-learn
 
@@ -137,7 +137,7 @@ freediving-recovery-analysis/
 
 **Validation:** Time-series splits, strict data leakage prevention
 
-## 🧪 Validation Strategy
+## Validation Strategy
 
 ### Time Synchronization
 
@@ -173,7 +173,7 @@ Recovery patterns validated across ERS spectrum:
 - **Medium ERS (0.72)**: Moderate recovery with minor oscillations
 - **Low ERS (0.15)**: Prolonged elevated HR, poor vagal reactivation
 
-## 🔍 Scientific Insights
+## Scientific Insights
 
 ### Algorithm Validation (Product Track)
 - ERS components align with vagal reactivation physiology
@@ -190,7 +190,7 @@ Recovery patterns validated across ERS spectrum:
 - Establishes reproducible framework for wearable device validation
 - Quantifies information dimensionality constraints in consumer health tech
 
-## 💡 Use Cases
+## Use Cases
 
 ### Immediate Applications
 - Real-time recovery monitoring for freedivers/breath-hold athletes
@@ -202,13 +202,13 @@ Recovery patterns validated across ERS spectrum:
 - Multi-modal integration (SpO₂, skin temp, HRV metrics)
 - Clinical translation: OSA severity, COPD exacerbation prediction
 
-## ⚠️ Limitations
+## Limitations
 - **External Validity**: N-of-1 design (121 sessions, single subject) provides deep individual insights but limited population generalizability
 - **Data Dimensionality**: Heart rate-only analysis; multi-modal signals needed for comprehensive state assessment
 - **Device Constraints**: Apple Watch irregular sampling and motion artifact sensitivity
 - **Scenario Specificity**: ERS designed for static apnea; other modalities (dynamic diving, HIIT) require validation
 
-## 🗺️ Roadmap
+## Roadmap
 - [ ] Late Recovery Score (LRS) for ≥90s window
 - [ ] Cross-subject validation (N>1)
 - [ ] SpO₂/temp integration + data fusion algorithms
@@ -216,21 +216,21 @@ Recovery patterns validated across ERS spectrum:
 - [ ] Real-time on-device deployment
 - [ ] Clinical trial design for OSA/COPD applications
 
-## 👤 Author
+## Author
 
 **Yi-Chuan Su (蘇翊銓)**
 
-🎓 B.S. Nursing, China Medical University (2024)  
-🏥 Registered Nurse (Taiwan)  
-🏊 AIDA4 & Molchanovs W3 Freediving Instructor Assistant
+B.S. Nursing, China Medical University (2024)  
+Registered Nurse (Taiwan)  
+AIDA4 & Molchanovs W3 Freediving Instructor Assistant
 
-📧 Contact: Via GitHub Issues
+Contact: Via GitHub Issues
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License. See the LICENSE file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Freediving community for data collection support
 - Open source ML community for robust tools and libraries
