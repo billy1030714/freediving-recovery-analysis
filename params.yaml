@@ -15,7 +15,7 @@ data_cleaning:
 # ===============================
 feature_engineering:
 
-  # Baseline HR calculation window BEFORE apnea end
+  # Baseline HR calculation window BEFORE apnea(150s)
   # Used in analyze_event():
   #   df[(Time >= t0 - base_window[0]) & (Time < t0 - base_window[1])]
   # Meaning: baseline is computed from [t0-330s, t0-150s)
