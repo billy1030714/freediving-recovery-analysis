@@ -59,3 +59,4 @@ def test_compute_ers(test_name, inputs, expected_output):
         norm_slope=inputs.get("norm_slope")
     )
     assert result == pytest.approx(expected_output)
+    

@@ -306,3 +306,4 @@ if __name__ == "__main__":
     DIR_REPORT.mkdir(exist_ok=True)
     report_gen = ReportGenerator()
     report_gen.run()
+    
